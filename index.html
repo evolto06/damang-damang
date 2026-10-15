@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#17241d" />
+    <title>Spider Derby — The Fighting Stick</title>
+  </head>
+  <body>
+    <main id="game" aria-label="Spider Derby movement practice">
+      <canvas id="scene" tabindex="0" aria-label="Two spiders facing each other on a bamboo fighting stick"></canvas>
+      <div class="vignette" aria-hidden="true"></div>
+      <header class="topbar">
+        <div class="identity"><span class="mark" aria-hidden="true">✳</span><div><h1>SPIDER DERBY</h1><span class="subtitle">THE FIGHTING STICK</span></div></div>
+        <div class="session"><span class="live-dot"></span> MOVEMENT PRACTICE <span class="session-no">/ 01</span></div>
+        <button id="pause" class="icon-button" aria-label="Pause game" title="Pause (Esc)">Ⅱ</button>
+      </header>
+      <section class="fighters" aria-label="Fighters">
+        <div class="fighter player"><div class="fighter-label"><span class="tag">01 / YOU</span><span class="ready">READY</span></div><h2>Silkfang</h2><div class="identity-line"></div><p>Garden spider <span>●</span> Player controlled</p></div>
+        <div class="versus">VS<span>FREE PRACTICE</span></div>
+        <div class="fighter opponent"><div class="fighter-label"><span class="tag">02 / OPPONENT</span><span class="ready muted">IDLE</span></div><h2>Thorn</h2><div class="identity-line"></div><p>Garden spider <span>●</span> Training partner</p></div>
+      </section>
+      <div class="arena-caption"><span class="caption-rule"></span><span>BAMBOO GROVE</span><span class="caption-rule"></span></div>
+      <div id="asset-status" class="asset-status" role="status">Preparing the spiders…</div>
+      <section class="practice-note"><span class="eyebrow">GET YOUR FOOTING</span><h3>Every duel starts<br>with a steady step.</h3><p>Advance, retreat, and find your distance.</p></section>
+      <div class="distance"><span>SEPARATION</span><strong id="distance">5.0 <small>u</small></strong><div class="distance-line"><i id="distance-fill"></i></div></div>
+      <footer class="bottom-bar">
+        <div class="movement-controls"><span class="control-caption">MOVE ALONG THE STICK</span><div class="keys"><button class="key" data-direction="-1" aria-label="Move left">A</button><button class="key" data-direction="1" aria-label="Move right">D</button><span class="or">or ← →</span></div></div>
+        <button id="dash" class="dash-button"><span class="dash-icon">↠</span><span><strong>LUNGE</strong><small id="dash-status">SHIFT / SPACE</small></span><span class="cooldown-track"><i id="cooldown"></i></span></button>
+        <div class="utility-controls"><button id="reset"><kbd>R</kbd> Reset positions</button><button id="help"><kbd>?</kbd> Controls</button></div>
+      </footer>
+      <div class="build-label">MOVEMENT PROTOTYPE <span>·</span> COMBAT COMING LATER</div>
+      <div id="overlay" class="overlay" hidden><div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title"><span class="eyebrow">TAKE A BREATHER</span><h2 id="dialog-title">Practice paused.</h2><p id="dialog-copy">Your spiders will be right here.</p><div class="help-grid"><kbd>A / ←</kbd><span>Move left along the stick</span><kbd>D / →</kbd><span>Move right along the stick</span><kbd>Shift / Space</kbd><span>Lunge in your movement direction</span><kbd>R</kbd><span>Reset both positions</span><kbd>Esc</kbd><span>Pause or resume</span></div><p class="dialog-footnote">Lunge from rest to move toward your opponent.<br>This prototype explores movement; attacks and damage are not implemented.</p><button id="resume" class="resume">BACK TO THE STICK <span>↗</span></button></div></div>
+    </main>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

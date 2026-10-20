@@ -181,7 +181,7 @@ export function advanceAerial(fighter, other, index, action) {
   } else if (air.mode === 'reeling') {
     advanceReeling(fighter, other, index, offset, direction);
   } else {
-    air.vx = clamp((air.vx + direction * 2 * DT) * Math.exp(-0.12 * DT), -AIR.maxSwingSpeed, AIR.maxSwingSpeed);
+    air.vx = clamp((air.vx + direction * AIR.fallSteer * DT) * Math.exp(-0.12 * DT), -AIR.maxSwingSpeed, AIR.maxSwingSpeed);
     air.vy = Math.max(-AIR.terminalSpeed, air.vy - AIR.gravity * DT);
     const x = fighter.x + air.vx * DT;
     fighter.x = legalX(fighter, other, index, x);

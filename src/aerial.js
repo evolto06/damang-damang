@@ -164,9 +164,9 @@ export function advanceAerial(fighter, other, index, action) {
   if (air.mode === 'grounded') return true;
   air.ticks++;
   if (air.mode === 'reattaching') {
-    const t = Math.min(1, air.ticks / AIR.reattachTicks), eased = smooth(t);
+    const t = Math.min(1, air.ticks / AIR.reattachTicks);
     const fall = (1 - t) * (1 - t);
-    fighter.x = legalX(fighter, other, index, air.startX + (air.landingX - air.startX) * eased);
+    fighter.x = legalX(fighter, other, index, air.startX + (air.landingX - air.startX) * t);
     // Quadratic fall matches the reel's vertical speed on the first grip tick,
     // so the winch decelerates into the twig instead of stopping dead.
     air.y = air.startY * fall; air.vx = 0; air.vy = 0;

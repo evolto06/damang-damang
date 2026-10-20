@@ -21,7 +21,7 @@ export function stickSurfaceY(x, z) {
   return bottom;
 }
 export const isAttached = fighter => !fighter.air || fighter.air.mode === 'attached';
-export const createAir = () => ({ mode: 'attached', y: 0, vx: 0, vy: 0, ticks: 0, anchorX: 0, anchorY: 0, anchorZ: 0, ropeLength: 0, landingX: 0, startX: 0, startY: 0, blocked: false, reelRamp: 1, exitVx: 0 });
+export const createAir = () => ({ mode: 'attached', y: 0, vx: 0, vy: 0, ticks: 0, animationTicks: 0, anchorX: 0, anchorY: 0, anchorZ: 0, ropeLength: 0, landingX: 0, startX: 0, startY: 0, blocked: false, reelRamp: 1, exitVx: 0 });
 export function outletOffset(fighter) {
   return [fighter.forward * AIR.outlet[2] * BITE.scale, BITE.offsetY - AIR.outlet[1] * BITE.scale, fighter.forward * AIR.outlet[0] * BITE.scale];
 }
@@ -162,7 +162,7 @@ export function advanceAerial(fighter, other, index, action) {
     air.anchorY = stickSurfaceY(air.anchorX, air.anchorZ);
   }
   if (air.mode === 'grounded') return true;
-  air.ticks++;
+  air.ticks++; air.animationTicks = (air.animationTicks ?? 0) + 1;
   if (air.mode === 'reattaching') {
     const t = Math.min(1, air.ticks / AIR.reattachTicks);
     const fall = (1 - t) * (1 - t);

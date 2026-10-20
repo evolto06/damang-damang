@@ -2,7 +2,9 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { STICK } from './scene.js';
 import { BITE, bitePose } from './bite-profile.js';
+import { WEB, webPose } from './web-attack.js';
 import { AIR } from './aerial.js';
+import { hangingPose } from './hanging-pose.js';
 
 export const ATTACHMENT = Object.freeze({ scale: BITE.scale, offsetY: BITE.offsetY, stride: 0.34, stance: 0.72, tolerance: 0.02 });
 
@@ -52,9 +54,11 @@ export function createSpiderRig(source, index) {
   inverted.scale.setScalar(ATTACHMENT.scale);
   inverted.position.y = ATTACHMENT.offsetY;
   root.add(facing); facing.add(inverted);
-  const spinneret = new THREE.Object3D(); spinneret.position.fromArray(AIR.outlet); inverted.add(spinneret);
+  const torso = new THREE.Group(); inverted.add(torso);
+  const abdomen = new THREE.Group(); abdomen.position.fromArray(WEB.pivot); torso.add(abdomen);
+  const spinneret = new THREE.Object3D(); spinneret.position.fromArray(AIR.outlet).sub(abdomen.position); abdomen.add(spinneret);
   const material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.78, flatShading: true });
-  const bodyParts = [], mouthParts = [], legParts = new Map();
+  const bodyParts = [], abdomenParts = [], mouthParts = [], legParts = new Map();
   source.traverse(mesh => {
     if (!mesh.isMesh) return;
     const match = mesh.name.match(/^(?:Leg|Claw)_([LR][1-4])_/);
@@ -63,12 +67,17 @@ export function createSpiderRig(source, index) {
       if (!legParts.has(match[1])) legParts.set(match[1], []);
       legParts.get(match[1]).push({ name: mesh.name, geometry });
     } else if (/^(Chelicera|Fang|Pedipalp|Labium|Maxilla)/.test(mesh.name)) mouthParts.push({ name: mesh.name, geometry });
+    else if (/^(Opisthosoma|Spinneret|Book_lung)/.test(mesh.name)) abdomenParts.push(geometry);
     else bodyParts.push(geometry);
   });
   const bodyGeometry = mergeGeometries(bodyParts);
   for (const geometry of bodyParts) geometry.dispose();
-  const body = new THREE.Mesh(bodyGeometry, material); body.castShadow = true; inverted.add(body);
-  const mouth = new THREE.Group(); inverted.add(mouth);
+  const body = new THREE.Mesh(bodyGeometry, material); body.castShadow = true; torso.add(body);
+  const abdomenGeometry = mergeGeometries(abdomenParts);
+  for (const geometry of abdomenParts) geometry.dispose();
+  abdomenGeometry.translate(...WEB.pivot.map(value => -value));
+  const abdomenMesh = new THREE.Mesh(abdomenGeometry, material); abdomenMesh.castShadow = true; abdomen.add(abdomenMesh);
+  const mouth = new THREE.Group(); torso.add(mouth);
   const jaws = ['L', 'R'].map((side, index) => {
     const mirror = index ? -1 : 1;
     const jawPivot = BITE.jawPivot.map((value, axis) => axis ? value : value * mirror);
@@ -123,7 +132,7 @@ export function createSpiderRig(source, index) {
     const mesh = new THREE.Mesh(geometry, material); mesh.castShadow = true; mesh.frustumCulled = false; inverted.add(mesh);
     legs.push({ name, side, number, hip, mesh, segments, original, originalNormals, clawStart, clawCenter, contact: new THREE.Vector3(), stance: true });
   }
-  const rig = { root, facing, inverted, body, mouth, jaws, palps, spinneret, material, legs, forward, index, update: (x, fighter) => updateSpiderRig(rig, x, fighter) };
+  const rig = { root, facing, inverted, torso, abdomen, abdomenMesh, body, mouth, jaws, palps, spinneret, material, legs, forward, index, update: (x, fighter) => updateSpiderRig(rig, x, fighter) };
   updateSpiderRig(rig, index ? 2.45 : -2.45);
   return rig;
 }
@@ -134,20 +143,36 @@ function updateSpiderRig(rig, x, fighter) {
   const phase = fighter?.phase ?? 'idle';
   const ticks = fighter?.phaseTicks ?? 0;
   rig.material.color.set(phase === 'ko' ? '#77736b' : '#ffffff');
-  rig.material.emissive.set(phase === 'hitstun' ? '#9c2510' : phase === 'windup' || phase === 'active' ? '#815012' : '#000000');
+  rig.material.emissive.set(phase === 'webstun' ? '#80c5c9' : phase.startsWith('web') ? '#23666a' : phase === 'hitstun' ? '#9c2510' : phase === 'windup' || phase === 'active' ? '#815012' : '#000000');
   rig.material.emissiveIntensity = phase === 'active' ? 0.65 : phase === 'hitstun' ? 0.8 : 0.35;
-  const pose = fighter?.pose ?? bitePose(phase, ticks);
+  const pose = fighter?.pose ?? { ...bitePose(phase, ticks), ...webPose(phase, ticks) };
+  const webStand = pose.webStand ?? 0, webCurl = pose.webCurl ?? 0;
+  rig.torso.position.y = WEB.rise * webStand; rig.abdomen.rotation.x = WEB.curl * webCurl;
   for (const joint of rig.jaws) { joint.jaw.rotation.x = pose.jaw; joint.fang.rotation.x = pose.fang; }
   const rear = pose.rear ?? 0, strike = pose.strike ?? 0;
-  for (const palp of rig.palps) palp.group.rotation.set(-0.38 * rear + 0.2 * strike, (palp.side === 'L' ? -1 : 1) * 0.22 * rear, 0);
+  const hang = hangingPose(fighter, forward);
+  for (const palp of rig.palps) {
+    const side = palp.side === 'L' ? -1 : 1;
+    const pulse = Math.sin(hang.phase + side * 0.8);
+    palp.group.rotation.set(-0.38 * rear + 0.2 * strike + hang.motion * (0.18 - 0.12 * pulse - 0.18 * hang.climb * pulse),
+      side * (0.22 * rear + hang.motion * (0.12 + 0.06 * pulse)), 0);
+  }
   // Both real joints rotate about their original attachments. The exact same
   // angles and original fang apex drive simulation contact, without sliding
   // the mouth assembly away from the head or disturbing planted feet.
   const air = fighter?.air;
-  const reaching = air?.mode === 'reattaching' ? Math.min(1, air.ticks / AIR.reattachTicks) : 0;
-  const airBlend = !air || air.mode === 'attached' ? 0 : air.mode === 'reattaching' ? 1 - reaching * reaching * (3 - 2 * reaching) : 1;
+  const airBlend = hang.blend;
   rig.root.position.set(x, air?.y ?? 0, 0);
-  if (!turned && rig.lastX === x && rig.lastAirBlend === airBlend && rig.lastRear === rear && rig.lastStrike === strike) return;
+  // Rotate about the actual source spinneret cap, keeping the physics outlet
+  // and visible silk exactly coincident through the whole sway.
+  rig.inverted.rotation.set(hang.pitch, 0, Math.PI);
+  const outlet = new THREE.Vector3(...AIR.outlet).multiplyScalar(ATTACHMENT.scale);
+  const neutralOutlet = outlet.clone().applyAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI);
+  rig.inverted.position.copy(neutralOutlet).sub(outlet.applyQuaternion(rig.inverted.quaternion));
+  rig.inverted.position.y += ATTACHMENT.offsetY;
+  if (!turned && rig.lastX === x && rig.lastAirBlend === airBlend && rig.lastRear === rear && rig.lastStrike === strike && rig.lastWebStand === webStand && rig.lastWebCurl === webCurl && rig.lastHangPhase === hang.phase && rig.lastHangMotion === hang.motion && rig.lastHangClimb === hang.climb && rig.lastHangDrift === hang.drift) return;
+  rig.lastHangPhase = hang.phase; rig.lastHangMotion = hang.motion; rig.lastHangClimb = hang.climb; rig.lastHangDrift = hang.drift;
+  rig.lastWebStand = webStand; rig.lastWebCurl = webCurl;
   rig.lastX = x; rig.lastAirBlend = airBlend; rig.lastRear = rear; rig.lastStrike = strike;
   const vertex = new THREE.Vector3(), vertexNormal = new THREE.Vector3();
   rig.root.position.x = x;
@@ -156,12 +181,13 @@ function updateSpiderRig(rig, x, fighter) {
     const cycle = footCycle(x, leg.number, leg.side);
     // The rear two pairs brace on the twig while the front two pairs attack.
     const attacking = rear + strike > 1e-8;
-    const braced = attacking && leg.number >= 2;
+    const braced = (attacking && leg.number >= 2) || webStand > 0;
     const radius = STICK.radius + 0.007 + (braced ? 0 : cycle.lift);
     const contactY = radius * 0.55, contactSide = radius * Math.sqrt(1 - 0.55 ** 2);
     const toe = new THREE.Vector3(leg.side * contactSide / scale, -(contactY - ATTACHMENT.offsetY) / scale,
       leg.hip.z + [0.7, 0.35, -0.4, -0.9][leg.number] + rig.forward * cycle.relativeX / scale);
-    const h = leg.hip, s = leg.side, z = toe.z;
+    const h = leg.hip.clone(); h.y += WEB.rise * webStand;
+    const s = leg.side, z = toe.z;
     const points = [
       h,
       new THREE.Vector3(h.x + s * 0.23, h.y - 0.025, h.z),
@@ -172,6 +198,11 @@ function updateSpiderRig(rig, x, fighter) {
       new THREE.Vector3(s * 0.43, toe.y - 0.08, z),
       toe,
     ];
+    if (webStand > 0) {
+      points[2].y += 0.8 * webStand; points[2].x += s * 0.18 * webStand;
+      points[3].y += 0.45 * webStand; points[3].x += s * 0.2 * webStand;
+      points[4].y += 0.2 * webStand;
+    }
     if (leg.number < 2 && attacking) {
       // Adapt the reference's upright rear-and-snap silhouette to an inverted
       // spider: forelegs sweep away from the twig, spread, then strike forward.
@@ -208,7 +239,21 @@ function updateSpiderRig(rig, x, fighter) {
         new THREE.Vector3(s * 0.65, 1.7, h.z),
         new THREE.Vector3(s * 0.55, 1.55, h.z),
       ];
-      for (let joint = 1; joint < points.length; joint++) points[joint].lerp(folded[joint], airBlend);
+      // Native +Y is dorsal: the persistent Rz(PI) inversion maps it down.
+      // Reflect the curl about its original hip so feet reach ventrally toward
+      // the twig above, while the abdomen stays upside down through the fall.
+      for (let joint = 1; joint < folded.length; joint++) folded[joint].y = 2 * h.y - folded[joint].y;
+      // Each pair trails the swing; opposite sides take alternating retrieval
+      // strokes rather than marching in place or freezing into one curled pose.
+      const wave = Math.sin(hang.phase + leg.number * 0.9 + (s < 0 ? Math.PI : 0));
+      const pull = Math.sin(hang.phase * 1.7 + leg.number * 0.65 + (s < 0 ? Math.PI : 0));
+      for (let joint = 1; joint < points.length; joint++) {
+        const distal = joint / 7;
+        folded[joint].x += s * hang.motion * distal * (0.10 * wave + 0.12 * hang.climb * pull);
+        folded[joint].y -= hang.motion * distal * (0.13 * wave + 0.30 * hang.climb * pull);
+        folded[joint].z += hang.motion * distal * (-0.22 * hang.drift + 0.12 * wave - 0.38 * hang.climb * pull);
+        points[joint].lerp(folded[joint], airBlend);
+      }
     }
     const positions = leg.mesh.geometry.attributes.position, normals = leg.mesh.geometry.attributes.normal;
     for (let j = 0; j < 7; j++) {

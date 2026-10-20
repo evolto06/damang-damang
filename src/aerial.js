@@ -85,7 +85,7 @@ function advanceReeling(fighter, other, index, offset, direction) {
   const dt = DT / SUBSTEPS, startY = air.y;
   for (let step = 0; step < SUBSTEPS; step++) {
     const angle = Math.atan2(fighter.x - centerX, centerY - air.y);
-    air.vx += direction * AIR.pump * Math.cos(angle) * dt;
+    air.vx += direction * AIR.reelSteer * Math.cos(angle) * dt;
     air.vx = clamp(air.vx * Math.exp(-AIR.swingDrag * dt), -AIR.maxSwingSpeed, AIR.maxSwingSpeed);
     const x = fighter.x + air.vx * dt;
     fighter.x = legalX(fighter, other, index, x);

@@ -109,7 +109,7 @@ function advancePendulum(fighter, other, index, offset, direction) {
   const dt = DT / SUBSTEPS;
   for (let step = 0; step < SUBSTEPS; step++) {
     const length = air.ropeLength;
-    momentum += length * (direction * AIR.pump * Math.cos(angle) - AIR.gravity * Math.sin(angle)) * dt;
+    momentum += length * (direction * AIR.pump * Math.cos(angle) - AIR.swingGravity * Math.sin(angle)) * dt;
     momentum *= Math.exp(-AIR.swingDrag * dt);
     momentum = clamp(momentum, -AIR.maxSwingSpeed * length, AIR.maxSwingSpeed * length);
     const previousAngle = angle;

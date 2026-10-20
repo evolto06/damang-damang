@@ -197,7 +197,7 @@ export function advanceAerial(fighter, other, index, action) {
   // hang, or at the swing limit. The winch then eases in over a few ticks.
   if (air.mode === 'swinging') {
     const speed = Math.hypot(air.vx, air.vy);
-    if (air.ticks >= AIR.swingTicks || (air.ticks >= AIR.swingMinTicks && (air.vy >= 0.15 || speed < 0.4))) {
+    if (air.ticks >= AIR.swingTicks || (air.ticks >= AIR.swingMinTicks && (air.vy >= AIR.reelEngageVy || speed < 0.4))) {
       air.mode = 'reeling'; air.ticks = 0;
       // Begin the winch at the swing's current upward speed so the handoff has
       // no vertical velocity step; it then eases on to the full reel speed.

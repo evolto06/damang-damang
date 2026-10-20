@@ -9,6 +9,7 @@ import { createStreet, createHeldStick, STICK } from './scene.js';
 import { createSpiderRig, inspectRig } from './spider-rig.js';
 import { fightFeedback } from './feedback.js';
 import { fitPlayCamera } from './camera.js';
+import { createWebEffects } from './web-effects.js';
 import { createSilkLine } from './silk.js';
 
 const $ = selector => document.querySelector(selector);
@@ -26,6 +27,7 @@ camera.position.set(0, 0.15, 18);
 camera.lookAt(0, 0.4, 0);
 createStreet(scene);
 const heldStickRoot = createHeldStick(scene);
+const webEffects = createWebEffects(heldStickRoot);
 const runtime = createRuntime({ createOpponent: createAI, decideOpponent: decideAI });
 const held = new Set();
 const pointerDirections = new Map();
@@ -92,7 +94,7 @@ $('#resume').addEventListener('click', () => runtime.world.status === 'ended' ? 
 $('#dialog-restart').addEventListener('click', restart);
 $('#help').addEventListener('click', () => setPaused(true));
 $('#reset').addEventListener('click', restart);
-for (const kind of ['dash', 'bite', 'drop', 'web']) {
+for (const kind of ['dash', 'bite', 'drop', 'web', 'shoot']) {
   const button = $('#' + kind);
   button.addEventListener('pointerdown', event => { event.preventDefault(); queueAction(runtime, kind, event.timeStamp); });
   button.addEventListener('click', event => { if (event.detail === 0) queueAction(runtime, kind, event.timeStamp); });
@@ -116,12 +118,13 @@ window.addEventListener('keydown', event => {
     event.preventDefault(); return;
   }
   if (event.target instanceof HTMLButtonElement && ['Space', 'Enter'].includes(event.code)) return;
-  if (['ArrowLeft', 'ArrowRight', 'ArrowDown', 'Space', 'ShiftLeft', 'ShiftRight', 'KeyA', 'KeyD', 'KeyJ', 'KeyS', 'KeyC'].includes(event.code)) event.preventDefault();
+  if (['ArrowLeft', 'ArrowRight', 'ArrowDown', 'Space', 'ShiftLeft', 'ShiftRight', 'KeyA', 'KeyD', 'KeyJ', 'KeyK', 'KeyS', 'KeyC'].includes(event.code)) event.preventDefault();
   if (event.repeat) return;
   if (event.code === 'KeyR') { restart(); return; }
   if (event.code === 'Escape') { setPaused(!runtime.paused); return; }
   if (event.code === 'KeyH' || event.key === '?') { setPaused(true); return; }
   if (!runtime.ready || runtime.paused || runtime.world.status !== 'playing') return;
+  if (event.code === 'KeyK') queueAction(runtime, 'shoot', event.timeStamp);
   if (event.code === 'KeyJ') queueAction(runtime, 'bite', event.timeStamp);
   if (event.code === 'ArrowDown' || event.code === 'KeyS') queueAction(runtime, 'drop', event.timeStamp);
   if (event.code === 'KeyC') queueAction(runtime, 'web', event.timeStamp);
@@ -151,6 +154,7 @@ renderer.setAnimationLoop(time => {
     const { x, fighter } = shown[rig.index];
     rig.update(x, fighter); silks[rig.index].update(rig, fighter);
   }
+  webEffects.update(world, shown.map(item => item.fighter), alpha);
   const feedback = fightFeedback(runtime);
   const prompt = $('#fight-prompt');
   if (prompt.textContent !== feedback.prompt) prompt.textContent = feedback.prompt;

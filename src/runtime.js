@@ -35,7 +35,7 @@ function queue(runtime, kind, value, timestamp) {
 }
 // Events are consumed once at their first eligible tick, including when a busy
 // fighter rejects them. They never become a buffered attack after recovery.
-export const queueAction = (runtime, kind, timestamp) => ['bite', 'dash', 'drop', 'web'].includes(kind) && queue(runtime, kind, true, timestamp);
+export const queueAction = (runtime, kind, timestamp) => ['bite', 'dash', 'drop', 'web', 'shoot'].includes(kind) && queue(runtime, kind, true, timestamp);
 export const queueDirection = (runtime, direction, timestamp) => queue(runtime, 'direction', Math.sign(direction), timestamp);
 export function pauseRuntime(runtime, value) {
   clearActions(runtime); resetClock(runtime.clock);

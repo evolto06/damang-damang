@@ -2,7 +2,7 @@
 // Original chelicera top attachment, fang base-ring center, and sharp apex.
 // The front four planes are actual lower-front prosoma triangle planes;
 // five caps restrict damage to a small patch inside that visible body mesh.
-export const BITE = Object.freeze({ scale: 0.22, offsetY: -0.06, separation: 0.74, jawPivot: [-0.23, 1.08655945, 1.46], fangPivot: [-0.24, 0.59655947, 1.59], tip: [-0.055, 0.49655944, 1.74000001] });
+export const BITE = Object.freeze({ scale: 0.22, webRise: 0.65, offsetY: -0.06, separation: 0.74, jawPivot: [-0.23, 1.08655945, 1.46], fangPivot: [-0.24, 0.59655947, 1.59], tip: [-0.055, 0.49655944, 1.74000001] });
 export const HURT_PLANES = Object.freeze([
   [0.276865304, -0.483041581, 0.830672278, 0.820835687],
   [-0.276865286, -0.483041688, 0.830672223, 0.820835480],
@@ -13,7 +13,7 @@ export const HURT_PLANES = Object.freeze([
 ]);
 const lerp = (a, b, t) => a + (b - a) * t;
 // Foreleg weights share the sampled/frozen bite pose, including impact frames.
-export const mixPose = (a, b, t) => Object.fromEntries(['jaw', 'fang', 'rear', 'strike'].map(key => [key, lerp(a[key] ?? 0, b[key] ?? 0, t)]));
+export const mixPose = (a, b, t) => Object.fromEntries(['jaw', 'fang', 'rear', 'strike', 'webStand', 'webCurl'].map(key => [key, lerp(a[key] ?? 0, b[key] ?? 0, t)]));
 const smooth = t => t * t * (3 - 2 * t);
 const forelegPose = (phase, ticks) => {
   if (phase === 'windup') return { rear: smooth(Math.min(1, (ticks + 1) / 18)), strike: 0 };
@@ -43,7 +43,7 @@ export function worldFang(fighter, pose, side = -1) {
   return [fighter.x + fighter.forward * point[2] * BITE.scale, BITE.offsetY - point[1] * BITE.scale, fighter.forward * point[0] * BITE.scale];
 }
 export function hurtContains(point, target) {
-  const local = [point[2] / (target.forward * BITE.scale), (BITE.offsetY - point[1]) / BITE.scale, (point[0] - target.x) / (target.forward * BITE.scale)];
+  const local = [point[2] / (target.forward * BITE.scale), (BITE.offsetY - point[1]) / BITE.scale - BITE.webRise * (target.pose?.webStand ?? 0), (point[0] - target.x) / (target.forward * BITE.scale)];
   return HURT_PLANES.every(([x, y, z, distance]) => x * local[0] + y * local[1] + z * local[2] <= distance + 1e-9);
 }
 // Sweep the real apex on its connected two-hinge arc. Sixteen samples per
@@ -53,7 +53,7 @@ export function biteContact(attacker, target, previousAttacker, previousTarget) 
   const evaluate = (t, side) => {
     const pose = mixPose(previousAttacker.pose, attacker.pose, t);
     const source = { ...attacker, x: lerp(previousAttacker.x, attacker.x, t) };
-    const defender = { ...target, x: lerp(previousTarget.x, target.x, t) };
+    const defender = { ...target, x: lerp(previousTarget.x, target.x, t), pose: mixPose(previousTarget.pose, target.pose, t) };
     const point = worldFang(source, pose, side);
     return { t, pose, point, inside: hurtContains(point, defender) };
   };

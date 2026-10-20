@@ -1,6 +1,6 @@
 import { isAttached } from './aerial.js';
 
-export const phaseLabels = { idle: 'Ready', windup: 'Windup', active: 'Bite active', recovery: 'Recovering', hitstun: 'Hit · wait', ko: 'KO' };
+export const phaseLabels = { idle: 'Ready', windup: 'Windup', active: 'Bite active', recovery: 'Recovering', hitstun: 'Hit · wait', webwindup: 'Web windup', webrelease: 'Web release', webrecovery: 'Web recovery', webstun: 'Web stunned', ko: 'KO' };
 const airLabels = { falling: 'Falling', grounded: 'On pavement', deploying: 'Casting silk', swinging: 'Swinging', reeling: 'Climbing', reattaching: 'Gripping' };
 const returnPrompts = {
   falling: 'Falling · Press C / Web to cast silk and return. A / D steers.',
@@ -26,13 +26,18 @@ export function fightFeedback(runtime) {
   const dashReason = stickReason || (cooling ? `Wait ${(Math.ceil(player.cooldown * 10) / 10).toFixed(1)}s` : '');
   const canWeb = ['falling', 'grounded'].includes(player.air.mode);
   const webReason = frozen || (!canWeb ? attached ? 'Drop first' : airLabels[player.air.mode] : '');
-  let prompt = 'On stick · J / Bite attacks; Shift / Space lunges; ↓ / S drops.';
+  const shootReason = stickReason || (player.webCooldown > 0 ? `Wait ${(Math.ceil(player.webCooldown / 6) / 10).toFixed(1)}s` : '');
+  let prompt = 'On stick · K shoots a stunning web; close in and J bites. ↓ / S drops.';
   if (world.status !== 'playing') prompt = 'Round over · Choose Fight again or press R to restart.';
   else if (paused) prompt = 'Paused · Resume with Esc or the Resume button.';
   else if (!ready) prompt = 'Preparing the spiders · Controls unlock when loading finishes.';
   else if (world.hitstop > 0) prompt = 'Contact · Brief impact hold; actions resume automatically.';
   else if (!attached) prompt = player.air.blocked ? 'Opponent above · Steer A / D left or right to clear them and keep climbing.' : returnPrompts[player.air.mode];
   else if (waiting) prompt = 'Opponent returning · Movement, bite and lunge wait for their grip.';
+  else if (player.phase === 'webstun') prompt = 'Web stunned · Briefly trapped; wait to recover.';
+  else if (player.phase === 'webwindup') prompt = 'Web windup · Stand tall and curl the abdomen forward.';
+  else if (player.phase === 'webrelease' || player.phase === 'webrecovery') prompt = 'Web released · After recovery, close in and J bites the stunned opponent.';
+  else if (opponent.phase === 'webstun') prompt = 'Opponent web stunned · Close in and J bites before the net loosens.';
   else if (player.phase === 'windup') prompt = 'Bite windup · Committed; wait for contact, then recovery.';
   else if (player.phase === 'active') prompt = 'Bite active · Fangs must touch the opponent to deal damage.';
   else if (player.phase === 'recovery') prompt = 'Bite recovery · Wait before moving, biting, lunging or dropping.';
@@ -43,6 +48,7 @@ export function fightFeedback(runtime) {
     prompt, cooling,
     phases: world.fighters.map((fighter, index) => lifecycle || airLabels[fighter.air.mode] || (!isAttached(world.fighters[1 - index]) ? 'Return hold' : phaseLabels[fighter.phase])),
     actions: {
+      shoot: { disabled: !!shootReason, caption: shootReason || 'K · STUN' },
       bite: { disabled: !!stickReason, caption: stickReason || 'J' },
       dash: { disabled: !!dashReason, caption: dashReason || 'SHIFT / SPACE' },
       drop: { disabled: !!dropReason, caption: dropReason || '↓ / S' },

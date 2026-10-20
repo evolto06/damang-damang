@@ -38,7 +38,7 @@ test('visible silk tracks the original spinneret cap and the actual tapered twig
   const spinneret = source.getObjectByName('Spinneret_pair2_L');
   assert.ok(distanceToMesh(new THREE.Vector3(...AIR.outlet), spinneret, spinneret.matrixWorld) < 1e-7);
   assert.ok(distanceToMesh(new THREE.Vector3(...expected.anchor).add(stick.position), stick.children[0]) < 1e-7);
-  assert.ok(rig.legs.every(leg => !leg.stance && leg.contact.y > 1));
+  assert.ok(rig.legs.every(leg => !leg.stance && leg.contact.y < leg.hip.y));
 });
 test('the complete folded GLB rests above the pavement and restores planted gait after retrieval', () => {
   const scene = new THREE.Scene(), stick = createHeldStick(scene), rig = createSpiderRig(source, 0); stick.add(rig.root);

@@ -21,7 +21,7 @@ export function stickSurfaceY(x, z) {
   return bottom;
 }
 export const isAttached = fighter => !fighter.air || fighter.air.mode === 'attached';
-export const createAir = () => ({ mode: 'attached', y: 0, vx: 0, vy: 0, ticks: 0, anchorX: 0, anchorY: 0, anchorZ: 0, ropeLength: 0, landingX: 0, startX: 0, startY: 0, blocked: false, reelRamp: 1 });
+export const createAir = () => ({ mode: 'attached', y: 0, vx: 0, vy: 0, ticks: 0, anchorX: 0, anchorY: 0, anchorZ: 0, ropeLength: 0, landingX: 0, startX: 0, startY: 0, blocked: false, reelRamp: 1, exitVx: 0 });
 export function outletOffset(fighter) {
   return [fighter.forward * AIR.outlet[2] * BITE.scale, BITE.offsetY - AIR.outlet[1] * BITE.scale, fighter.forward * AIR.outlet[0] * BITE.scale];
 }
@@ -171,7 +171,7 @@ export function advanceAerial(fighter, other, index, action) {
     // so the winch decelerates into the twig instead of stopping dead.
     air.y = air.startY * fall; air.vx = 0; air.vy = 0;
     air.ropeLength = Math.hypot(fighter.x + offset[0] - air.anchorX, air.y + offset[1] - air.anchorY);
-    if (t === 1) fighter.air = createAir();
+    if (t === 1) { const exitVx = air.exitVx; fighter.air = createAir(); fighter.velocity = exitVx; }
     return true;
   }
   // The completed cast attaches before physics so the swing continues on this
@@ -208,11 +208,11 @@ export function advanceAerial(fighter, other, index, action) {
       air.reelRamp = smoothInverse(clamp(Math.max(0, air.vy) / AIR.reelSpeed, 0, 1));
     }
   } else if (air.mode === 'reeling' && air.y >= -0.28) {
-    air.mode = 'reattaching'; air.ticks = 0; air.startX = fighter.x; air.startY = air.y;
+    air.mode = 'reattaching'; air.ticks = 0; air.startX = fighter.x; air.startY = air.y; air.exitVx = air.vx;
     // Finish the grip where the swing and steering actually left the spider,
     // letting a little lateral momentum glide out, instead of dragging it back
     // to the cast point during the last 18 ticks.
-    air.landingX = legalX(fighter, other, index, fighter.x + air.vx * 0.18);
+    air.landingX = legalX(fighter, other, index, fighter.x + air.vx * AIR.reattachTicks * DT);
   }
   return true;
 }

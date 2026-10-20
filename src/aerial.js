@@ -157,6 +157,10 @@ export function advanceAerial(fighter, other, index, action) {
     air.anchorY = stickSurfaceY(air.anchorX, air.anchorZ);
     air.landingX = fighter.x;
   }
+  if (air.mode === 'deploying') {
+    air.anchorX = clamp(fighter.x + offset[0], AIR.stickLeft, AIR.stickRight);
+    air.anchorY = stickSurfaceY(air.anchorX, air.anchorZ);
+  }
   if (air.mode === 'grounded') return true;
   air.ticks++;
   if (air.mode === 'reattaching') {

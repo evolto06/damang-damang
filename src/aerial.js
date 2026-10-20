@@ -208,7 +208,7 @@ export function advanceAerial(fighter, other, index, action) {
     // Finish the grip where the swing and steering actually left the spider,
     // letting a little lateral momentum glide out, instead of dragging it back
     // to the cast point during the last 18 ticks.
-    air.landingX = legalX(fighter, other, index, fighter.x + air.vx * 0.12);
+    air.landingX = legalX(fighter, other, index, fighter.x + air.vx * 0.18);
   }
   return true;
 }

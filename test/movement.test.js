@@ -1,48 +1,53 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { advance, createState, RULES } from '../src/movement.js';
+import { createWorld, stepWorld } from '../src/combat.js';
+import { RULES } from '../src/movement.js';
 
-function simulate(hz, seconds, direction, dash = false) {
-  const state = createState();
-  for (let frame = 0; frame < hz * seconds; frame++) advance(state, { direction, dash: dash && frame === 0 }, 1 / hz);
-  return state;
+const tick = (world, count, actions) => { for (let i = 0; i < count; i++) stepWorld(world, actions); };
+function legal(world) {
+  const [left, right] = world.fighters;
+  assert.ok(left.x >= -RULES.limit && right.x <= RULES.limit);
+  assert.ok(right.x - left.x >= RULES.separation - 1e-9);
 }
-
-test('travel and lunge distance agree at 30, 60, and 144 Hz', () => {
-  for (const dash of [false, true]) {
-    const positions = [30, 60, 144].map(hz => simulate(hz, 0.5, -1, dash).x);
-    assert.ok(Math.max(...positions) - Math.min(...positions) < 0.012, positions.join(', '));
+test('both fighters accelerate and brake, with mirrored movement', () => {
+  const world = createWorld();
+  tick(world, 15, [{ direction: 1 }, { direction: -1 }]);
+  assert.ok(world.fighters[0].x > RULES.startX);
+  assert.ok(Math.abs(world.fighters[0].x + world.fighters[1].x) < 1e-9);
+  tick(world, 20, [{}, {}]);
+  assert.equal(world.fighters[0].velocity, 0);
+  assert.equal(world.fighters[1].velocity, 0);
+});
+test('simultaneous inward movement and opposing dashes remain symmetric without crossing', () => {
+  const world = createWorld();
+  for (let i = 0; i < 5000; i++) {
+    stepWorld(world, [{ direction: 1, dash: i % 60 === 0 }, { direction: -1, dash: i % 60 === 0 }]);
+    legal(world);
+    assert.ok(Math.abs(world.fighters[0].x + world.fighters[1].x) < 1e-8);
   }
 });
-test('retreat and a lunge cannot leave either end or pass through the opponent', () => {
-  const state = simulate(60, 5, -1, true);
-  assert.equal(state.x, -RULES.limit);
-  for (let frame = 0; frame < 600; frame++) advance(state, { direction: 1, dash: frame % 60 === 0 }, 1 / 60);
-  assert.equal(state.x, state.opponentX - RULES.separation);
-  assert.equal(state.velocity, 0);
+test('ordinary movement cannot push a stationary opponent', () => {
+  const world = createWorld();
+  tick(world, 600, [{ direction: 1, dash: true }, {}]);
+  assert.equal(world.fighters[1].x, RULES.opponentX);
+  assert.ok(Math.abs(world.fighters[1].x - world.fighters[0].x - RULES.separation) < 1e-9);
 });
-test('lunge cooldown rejects a second press and becomes available again', () => {
-  const state = createState();
-  advance(state, { direction: -1, dash: true }, 0.05);
-  const first = state.dashRemaining;
-  advance(state, { direction: -1, dash: true }, 0.05);
-  assert.ok(state.dashRemaining < first);
-  for (let frame = 0; frame < 60; frame++) advance(state, { direction: 0 }, 1 / 60);
-  assert.equal(state.cooldown, 0);
-  advance(state, { direction: 1, dash: true }, 1 / 60);
-  assert.ok(state.dashRemaining > 0);
+test('outward movement clamps both ends and an idle dash faces inward', () => {
+  const world = createWorld();
+  tick(world, 600, [{ direction: -1 }, { direction: 1 }]);
+  assert.equal(world.fighters[0].x, -RULES.limit);
+  assert.equal(world.fighters[1].x, RULES.limit);
+  stepWorld(world, [{ dash: true }, { dash: true }]);
+  assert.ok(world.fighters[0].x > -RULES.limit && world.fighters[1].x < RULES.limit);
+  legal(world);
 });
-test('release brakes to a stop and idle lunge faces the opponent', () => {
-  const state = simulate(60, 0.5, -1);
-  for (let i = 0; i < 30; i++) advance(state, { direction: 0 }, 1 / 60);
-  assert.equal(state.velocity, 0);
-  const before = state.x;
-  advance(state, { direction: 0, dash: true }, 0.1);
-  assert.ok(state.x > before);
-});
-test('nonfinite or nonpositive time does not corrupt state', () => {
-  const state = createState();
-  const before = structuredClone(state);
-  for (const delta of [NaN, Infinity, -1, 0]) advance(state, { direction: 1, dash: true }, delta);
-  assert.deepEqual(state, before);
+test('dash cooldown rejects rapid retries and becomes available again', () => {
+  const world = createWorld();
+  stepWorld(world, [{ dash: true, direction: -1 }, {}]);
+  tick(world, 20, [{ dash: true, direction: -1 }, {}]);
+  assert.ok(world.fighters[0].cooldown < RULES.dashCooldown - 0.2);
+  tick(world, 40, [{}, {}]);
+  assert.equal(world.fighters[0].cooldown, 0);
+  stepWorld(world, [{ dash: true }, {}]);
+  assert.ok(world.fighters[0].dashRemaining > 0);
 });

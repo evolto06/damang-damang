@@ -11,7 +11,7 @@ test('real timestamped approach/drop/D/C crosses beneath AI and lands opposite a
   const outcomes = [30, 60, 144].map(hz => {
     const runtime = createRuntime({ createOpponent: createAI, decideOpponent: decideAI });
     setReady(runtime, true); frameRuntime(runtime, 0);
-    queueDirection(runtime, 1, 1); queueAction(runtime, 'drop', 1417); queueAction(runtime, 'web', 2084);
+    queueDirection(runtime, 0, 1, 1); queueAction(runtime, 0, 'drop', 1417); queueAction(runtime, 0, 'web', 2084);
     let crossed = false, blocked = false, gripped = false, anchor;
     for (let frame = 1; frame <= hz * 4.5; frame++) {
       frameRuntime(runtime, frame * 1000 / hz);

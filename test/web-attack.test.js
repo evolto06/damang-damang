@@ -146,11 +146,11 @@ test('each intermediate curl sweeps ventrally about its connected hinge and clea
 });
 
 test('K edge is consumed once, world/projectile freeze through pause and hitstop, reset clears, and AI honors stun', () => {
-  const runtime = createRuntime(); setReady(runtime, true); frameRuntime(runtime, 0); queueAction(runtime, 'shoot', 4);
-  frameRuntime(runtime, 7); assert.equal(runtime.inputs.length, 1);
+  const runtime = createRuntime(); setReady(runtime, true); frameRuntime(runtime, 0); queueAction(runtime, 0, 'shoot', 4);
+  frameRuntime(runtime, 7); assert.equal(runtime.controls[0].inputs.length, 1);
   frameRuntime(runtime, 17); assert.equal(runtime.world.fighters[0].webId, 1);
-  queueAction(runtime, 'shoot', 20); for (let i = 2; i <= 25; i++) frameRuntime(runtime, i * 1000 / 60);
-  assert.equal(runtime.world.fighters[0].webId, 1); assert.equal(runtime.inputs.length, 0);
+  queueAction(runtime, 0, 'shoot', 20); for (let i = 2; i <= 25; i++) frameRuntime(runtime, i * 1000 / 60);
+  assert.equal(runtime.world.fighters[0].webId, 1); assert.equal(runtime.controls[0].inputs.length, 0);
   assert.equal(runtime.world.projectiles.length, 1);
   const effects = createWebEffects(new THREE.Group()), snapshot = structuredClone(runtime.world);
   for (let i = 0; i < 3; i++) effects.update(runtime.world, runtime.world.fighters, i / 2);
@@ -174,7 +174,7 @@ test('timestamped shooting, dropping and a close combo are independent of render
   const outcomes = [30, 60, 144].map(hz => {
     const runtime = createRuntime(); runtime.world = closeWorld(); setReady(runtime, true); frameRuntime(runtime, 0);
     const events = [[7, 'shoot'], [40, 'shoot'], [560, 'bite'], [1200, 'shoot'], [1900, 'drop'], [2100, 'shoot'], [2200, 'web']]; let event = 0;
-    for (let frame = 1; frame <= hz * 3; frame++) { const now = frame * 1000 / hz; while (event < events.length && events[event][0] <= now) { queueAction(runtime, events[event][1], events[event][0]); event++; } frameRuntime(runtime, now); }
+    for (let frame = 1; frame <= hz * 3; frame++) { const now = frame * 1000 / hz; while (event < events.length && events[event][0] <= now) { queueAction(runtime, 0, events[event][1], events[event][0]); event++; } frameRuntime(runtime, now); }
     assert.equal(runtime.world.fighters[1].hp, 80); return runtime.world;
   });
   assert.deepEqual(outcomes[0], outcomes[1]); assert.deepEqual(outcomes[1], outcomes[2]);

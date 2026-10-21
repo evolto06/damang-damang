@@ -143,20 +143,20 @@ test('drop/web timestamps remain render independent at 30/60/144Hz, including no
       const now = frame * 1000 / hz;
       while (next < script.length && script[next][0] <= now) {
         const [at, kind, value] = script[next++];
-        if (kind === 'direction') queueDirection(runtime, value, at); else queueAction(runtime, kind, at);
+        if (kind === 'direction') queueDirection(runtime, 0, value, at); else queueAction(runtime, 0, kind, at);
       }
       frameRuntime(runtime, now);
     }
     return runtime.world;
   });
   assert.deepEqual(outcomes[0], outcomes[1]); assert.deepEqual(outcomes[1], outcomes[2]);
-  const runtime = createRuntime(); setReady(runtime, true); frameRuntime(runtime, 0); queueAction(runtime, 'drop', 5);
+  const runtime = createRuntime(); setReady(runtime, true); frameRuntime(runtime, 0); queueAction(runtime, 0, 'drop', 5);
   frameRuntime(runtime, 7); assert.equal(runtime.world.fighters[0].air.mode, 'attached');
   frameRuntime(runtime, 17); assert.equal(runtime.world.fighters[0].air.mode, 'falling');
 });
 test('pause/hitstop/ended rounds freeze aerial physics; reset clears thread and transient inputs', () => {
   const runtime = createRuntime(); setReady(runtime, true); frameRuntime(runtime, 0);
-  queueAction(runtime, 'drop', 1); frameRuntime(runtime, 50); queueAction(runtime, 'web', 51); frameRuntime(runtime, 100);
+  queueAction(runtime, 0, 'drop', 1); frameRuntime(runtime, 50); queueAction(runtime, 0, 'web', 51); frameRuntime(runtime, 100);
   const beforeInvalid = structuredClone(runtime.world);
   for (const invalid of [NaN, Infinity, -1000]) frameRuntime(runtime, invalid);
   assert.deepEqual(runtime.world, beforeInvalid);
@@ -168,7 +168,7 @@ test('pause/hitstop/ended rounds freeze aerial physics; reset clears thread and 
   assert.deepEqual(runtime.world.fighters[0].air, air);
   runtime.world.status = 'ended'; const ended = structuredClone(runtime.world); tick(runtime.world, 60); assert.deepEqual(runtime.world, ended);
   restartRuntime(runtime); assert.equal(runtime.world.fighters[0].air.mode, 'attached');
-  assert.equal(silkEndpoints(runtime.world.fighters[0]).visible, false); assert.equal(runtime.inputs.length, 0);
+  assert.equal(silkEndpoints(runtime.world.fighters[0]).visible, false); assert.equal(runtime.controls[0].inputs.length, 0);
 });
 
 // Start from a known physical pose, independent of falling/casting timings.

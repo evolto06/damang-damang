@@ -21,22 +21,25 @@ export function runClock(clock, timestamp, callback) {
   if (steps === CLOCK.maxSteps && clock.accumulator >= CLOCK.step) { clock.simulationTime += clock.accumulator * 1000; clock.accumulator = 0; }
   return steps;
 }
-export function createRuntime({ createOpponent = () => ({}), decideOpponent = () => ({}) } = {}) {
-  return { world: createWorld(), clock: createClock(), ready: false, paused: false, alpha: 1, direction: 0, inputs: [], createOpponent, decideOpponent, ai: createOpponent() };
+const createControls = () => ({ direction: 0, inputs: [] });
+export function createRuntime({ createOpponent = () => ({}), decideOpponent = () => ({}), mode = 'bot' } = {}) {
+  return { world: createWorld(), clock: createClock(), ready: false, paused: false, alpha: 1, mode, controls: [createControls(), createControls()], createOpponent, decideOpponent, ai: createOpponent() };
 }
-export function clearActions(runtime) { runtime.direction = 0; runtime.inputs.length = 0; }
+export function clearActions(runtime) { for (const controls of runtime.controls) { controls.direction = 0; controls.inputs.length = 0; } }
 export function setReady(runtime, ready) { runtime.ready = ready; runtime.alpha = 1; clearActions(runtime); resetClock(runtime.clock); }
-function queue(runtime, kind, value, timestamp) {
+function queue(runtime, fighter, kind, value, timestamp) {
+  const controls = runtime.controls[fighter];
+  if (!controls || (runtime.mode === 'bot' && fighter !== 0)) return false;
   if (!runtime.ready || runtime.paused || runtime.world.status !== 'playing') return false;
   const at = Number.isFinite(timestamp) ? timestamp : runtime.clock.previous ?? 0;
-  runtime.inputs.push({ kind, value, at });
-  runtime.inputs.sort((a, b) => a.at - b.at);
+  controls.inputs.push({ kind, value, at });
+  controls.inputs.sort((a, b) => a.at - b.at);
   return true;
 }
 // Events are consumed once at their first eligible tick, including when a busy
 // fighter rejects them. They never become a buffered attack after recovery.
-export const queueAction = (runtime, kind, timestamp) => ['bite', 'dash', 'drop', 'web', 'shoot'].includes(kind) && queue(runtime, kind, true, timestamp);
-export const queueDirection = (runtime, direction, timestamp) => queue(runtime, 'direction', Math.sign(direction), timestamp);
+export const queueAction = (runtime, fighter, kind, timestamp) => ['bite', 'dash', 'drop', 'web', 'shoot'].includes(kind) && queue(runtime, fighter, kind, true, timestamp);
+export const queueDirection = (runtime, fighter, direction, timestamp) => queue(runtime, fighter, 'direction', Math.sign(direction), timestamp);
 export function pauseRuntime(runtime, value) {
   clearActions(runtime); resetClock(runtime.clock);
   if (runtime.world.status === 'ended') return false;
@@ -46,18 +49,23 @@ export function restartRuntime(runtime) {
   runtime.world = createWorld(); runtime.ai = runtime.createOpponent(); runtime.paused = false; runtime.alpha = 1;
   clearActions(runtime); resetClock(runtime.clock);
 }
+function sampleAction(controls, tickTime) {
+  const action = { direction: controls.direction };
+  while (controls.inputs.length && controls.inputs[0].at <= tickTime + 1e-7) {
+    const input = controls.inputs.shift();
+    if (input.kind === 'direction') controls.direction = action.direction = input.value;
+    else action[input.kind] = true;
+  }
+  return action;
+}
 export function frameRuntime(runtime, timestamp) {
   if (!runtime.ready || runtime.paused || runtime.world.status !== 'playing') { resetClock(runtime.clock); runtime.alpha = 1; return 0; }
   const rebased = runtime.clock.previous === null;
   const steps = runClock(runtime.clock, timestamp, tickTime => {
-    const player = { direction: runtime.direction, bite: false, dash: false };
-    while (runtime.inputs.length && runtime.inputs[0].at <= tickTime + 1e-7) {
-      const input = runtime.inputs.shift();
-      if (input.kind === 'direction') runtime.direction = player.direction = input.value;
-      else player[input.kind] = true;
-    }
-    const opponent = runtime.world.hitstop > 0 ? {} : runtime.decideOpponent(runtime.ai, runtime.world);
-    stepWorld(runtime.world, [player, opponent]);
+    const actions = [sampleAction(runtime.controls[0], tickTime)];
+    if (runtime.mode === 'pvp') actions.push(sampleAction(runtime.controls[1], tickTime));
+    else actions.push(runtime.world.hitstop > 0 ? {} : runtime.decideOpponent(runtime.ai, runtime.world));
+    stepWorld(runtime.world, actions);
     if (runtime.world.status === 'ended') { clearActions(runtime); return false; }
     return true;
   });

@@ -15,6 +15,11 @@ const returnPrompts = {
 export function fightFeedback(runtime) {
   const { world, ready, paused } = runtime;
   const [player, opponent] = world.fighters;
+  const pvp = runtime.mode === 'pvp';
+  const keys = pvp
+    ? { bite: 'Q', shoot: 'E', dash: 'F', drop: 'S', web: 'W · RETURN' }
+    : { bite: 'J', shoot: 'K', dash: 'SHIFT / SPACE', drop: '↓ / S', web: 'C · RETURN' };
+  const opponentName = pvp ? 'P2' : 'Opponent';
   const lifecycle = world.status !== 'playing' ? 'Round over' : paused ? 'Paused' : !ready ? 'Loading' : '';
   const frozen = lifecycle || (world.hitstop > 0 ? 'Contact hold' : '');
   const attached = isAttached(player), waiting = attached && !isAttached(opponent);
@@ -27,17 +32,17 @@ export function fightFeedback(runtime) {
   const canWeb = ['falling', 'grounded'].includes(player.air.mode);
   const webReason = frozen || (!canWeb ? attached ? 'Drop first' : airLabels[player.air.mode] : '');
   const shootReason = stickReason || (player.webCooldown > 0 ? `Wait ${(Math.ceil(player.webCooldown / 6) / 10).toFixed(1)}s` : '');
-  let prompt = 'On stick · K shoots a stunning web; close in and J bites. ↓ / S drops.';
+  let prompt = `On stick · ${keys.shoot} shoots a stunning web; close in and ${keys.bite} bites. ${keys.drop} drops.`;
   if (world.status !== 'playing') prompt = 'Round over · Choose Fight again or press R to restart.';
   else if (paused) prompt = 'Paused · Resume with Esc or the Resume button.';
   else if (!ready) prompt = 'Preparing the spiders · Controls unlock when loading finishes.';
   else if (world.hitstop > 0) prompt = 'Contact · Brief impact hold; actions resume automatically.';
-  else if (!attached) prompt = player.air.blocked ? 'Opponent above · Steer A / D left or right to clear them and keep climbing.' : returnPrompts[player.air.mode];
-  else if (waiting) prompt = 'Opponent returning · Movement, bite and lunge wait for their grip.';
+  else if (!attached) prompt = player.air.blocked ? `${opponentName} above · Steer A / D left or right to clear them and keep climbing.` : returnPrompts[player.air.mode];
+  else if (waiting) prompt = `${opponentName} returning · Movement, bite and lunge wait for their grip.`;
   else if (player.phase === 'webstun') prompt = 'Web stunned · Briefly trapped; wait to recover.';
   else if (player.phase === 'webwindup') prompt = 'Web windup · Stand tall and curl the abdomen forward.';
   else if (player.phase === 'webrelease' || player.phase === 'webrecovery') prompt = 'Web released · After recovery, close in and J bites the stunned opponent.';
-  else if (opponent.phase === 'webstun') prompt = 'Opponent web stunned · Close in and J bites before the net loosens.';
+  else if (opponent.phase === 'webstun') prompt = `${opponentName} web stunned · Close in and ${keys.bite} bites before the net loosens.`;
   else if (player.phase === 'windup') prompt = 'Bite windup · Committed; wait for contact, then recovery.';
   else if (player.phase === 'active') prompt = 'Bite active · Fangs must touch the opponent to deal damage.';
   else if (player.phase === 'recovery') prompt = 'Bite recovery · Wait before moving, biting, lunging or dropping.';
@@ -48,11 +53,11 @@ export function fightFeedback(runtime) {
     prompt, cooling,
     phases: world.fighters.map((fighter, index) => lifecycle || airLabels[fighter.air.mode] || (!isAttached(world.fighters[1 - index]) ? 'Return hold' : phaseLabels[fighter.phase])),
     actions: {
-      shoot: { disabled: !!shootReason, caption: shootReason || 'K · STUN' },
-      bite: { disabled: !!stickReason, caption: stickReason || 'J' },
-      dash: { disabled: !!dashReason, caption: dashReason || 'SHIFT / SPACE' },
-      drop: { disabled: !!dropReason, caption: dropReason || '↓ / S' },
-      web: { disabled: !!webReason, caption: webReason || 'C · RETURN' },
+      shoot: { disabled: !!shootReason, caption: shootReason || `${keys.shoot} · STUN` },
+      bite: { disabled: !!stickReason, caption: stickReason || keys.bite },
+      dash: { disabled: !!dashReason, caption: dashReason || keys.dash },
+      drop: { disabled: !!dropReason, caption: dropReason || keys.drop },
+      web: { disabled: !!webReason, caption: webReason || keys.web },
     },
     movementDisabled: !!frozen || (attached ? waiting || player.phase !== 'idle' : ['grounded', 'reattaching'].includes(player.air.mode)),
   };

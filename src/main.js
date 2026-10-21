@@ -14,8 +14,41 @@ import { createSilkLine } from './silk.js';
 
 const $ = selector => document.querySelector(selector);
 const canvas = $('#scene');
+const BINDS = {
+  bot: {
+    KeyA: ['move', 0, -1], KeyD: ['move', 0, 1], ArrowLeft: ['move', 0, -1], ArrowRight: ['move', 0, 1],
+    KeyJ: ['action', 0, 'bite'], KeyK: ['action', 0, 'shoot'], KeyS: ['action', 0, 'drop'], ArrowDown: ['action', 0, 'drop'],
+    KeyC: ['action', 0, 'web'], ShiftLeft: ['action', 0, 'dash'], ShiftRight: ['action', 0, 'dash'], Space: ['action', 0, 'dash'],
+  },
+  pvp: {
+    KeyA: ['move', 0, -1], KeyD: ['move', 0, 1], KeyS: ['action', 0, 'drop'], KeyW: ['action', 0, 'web'],
+    KeyQ: ['action', 0, 'bite'], KeyE: ['action', 0, 'shoot'], KeyF: ['action', 0, 'dash'],
+    ArrowLeft: ['move', 1, -1], ArrowRight: ['move', 1, 1], ArrowDown: ['action', 1, 'drop'], ArrowUp: ['action', 1, 'web'],
+    Comma: ['action', 1, 'bite'], Period: ['action', 1, 'shoot'], Slash: ['action', 1, 'dash'],
+  },
+};
+let bindings = BINDS.bot;
+let matchStarted = false;
+let assetsReady = false;
+const startButton = $('#start-bot');
+const pvpButton = $('#start-pvp');
+const startStatus = $('#start-status');
+function launchError(message) {
+  startStatus.textContent = message;
+  startStatus.dataset.state = 'error';
+  startButton.disabled = true;
+  pvpButton.disabled = true;
+  $('#start-retry').hidden = false;
+}
+$('#start-retry').addEventListener('click', () => window.location.reload());
 const scene = new THREE.Scene();
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+} catch (error) {
+  launchError('The game needs WebGL to run. Try a browser with hardware acceleration enabled, then reload.');
+  throw error;
+}
 renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -29,7 +62,7 @@ createStreet(scene);
 const heldStickRoot = createHeldStick(scene);
 const webEffects = createWebEffects(heldStickRoot);
 const runtime = createRuntime({ createOpponent: createAI, decideOpponent: decideAI });
-const held = new Set();
+const held = [new Set(), new Set()];
 const pointerDirections = new Map();
 let rigs = [];
 let silks = [];
@@ -40,13 +73,51 @@ new GLTFLoader().load('/models/spider.glb', gltf => {
   for (const rig of rigs) heldStickRoot.add(rig.root);
   silks = rigs.map(() => createSilkLine(heldStickRoot));
   silks.forEach(silk => silk.setResolution(canvas.clientWidth, canvas.clientHeight));
-  clearInput(); setReady(runtime, true);
+  clearInput();
+  assetsReady = true;
+  startButton.disabled = false;
+  pvpButton.disabled = false;
+  startStatus.textContent = 'Ready when you are. Choose Bot Match or PvP to begin.';
+  startStatus.dataset.state = 'ready';
   assetStatus.hidden = true;
 }, undefined, error => {
   console.error('Spider model could not be loaded:', error);
-  assetStatus.textContent = 'Spider model unavailable. Check public/models/spider.glb and reload.';
+  launchError('The spiders could not load. Check your connection and reload to try again.');
 });
-function clearInput() { held.clear(); pointerDirections.clear(); clearActions(runtime); }
+function applyMode(mode) {
+  const pvp = mode === 'pvp';
+  $('#player-name').textContent = pvp ? 'P1' : 'Ikaw';
+  $('#opponent-name').textContent = pvp ? 'P2' : 'Kalaban';
+  $('#player-detail').hidden = pvp;
+  $('#opponent-detail').hidden = pvp;
+  $('#move-hint').textContent = pvp ? 'A / D' : 'A / D · ← / →';
+  $('#player-health').setAttribute('aria-label', pvp ? 'P1 health' : 'Your health');
+  $('#opponent-health').setAttribute('aria-label', pvp ? 'P2 health' : 'Opponent health');
+  $('#shoot').setAttribute('aria-label', `Shoot a web to briefly stun the opponent. ${pvp ? 'E' : 'K'}`);
+  $('#bite').setAttribute('aria-label', `Bite. ${pvp ? 'Q' : 'J'}`);
+  $('#dash').setAttribute('aria-label', `Lunge. ${pvp ? 'F' : 'Shift or Space'}`);
+  $('#drop').setAttribute('aria-label', `Drop from the stick. ${pvp ? 'S' : 'Down arrow or S'}`);
+  $('#web').setAttribute('aria-label', `Shoot silk and return to the stick. ${pvp ? 'W' : 'C'}`);
+}
+function startMatch(mode) {
+  if (!assetsReady || matchStarted) return;
+  matchStarted = true;
+  runtime.mode = mode;
+  bindings = BINDS[mode];
+  applyMode(mode);
+  clearInput();
+  setReady(runtime, true);
+  $('#start-screen').hidden = true;
+  $('#game').classList.remove('at-menu');
+  $('#match-ui').inert = false;
+  $('#match-ui').removeAttribute('aria-hidden');
+  canvas.tabIndex = 0;
+  canvas.removeAttribute('aria-hidden');
+  canvas.focus({ preventScroll: true });
+}
+startButton.addEventListener('click', () => startMatch('bot'));
+pvpButton.addEventListener('click', () => startMatch('pvp'));
+function clearInput() { for (const keys of held) keys.clear(); pointerDirections.clear(); clearActions(runtime); }
 // Simulation ticks at a fixed 60 Hz; the renderer blends the last two ticks so
 // movement stays smooth on monitors that do not refresh on tick boundaries.
 function renderFighters(world, alpha) {
@@ -57,10 +128,11 @@ function renderFighters(world, alpha) {
     return { x, fighter: x === fighter.x && y === fighter.air.y ? fighter : { ...fighter, x, air: { ...fighter.air, y } } };
   });
 }
-function directionInput(timestamp) {
-  const keyboard = (held.has('KeyD') || held.has('ArrowRight') ? 1 : 0) - (held.has('KeyA') || held.has('ArrowLeft') ? 1 : 0);
-  const touch = [...pointerDirections.values()].reduce((sum, value) => sum + value, 0);
-  queueDirection(runtime, Math.sign(keyboard + touch), timestamp);
+function directionInput(fighter, timestamp) {
+  let keyboard = 0;
+  for (const code of held[fighter]) keyboard += bindings[code]?.[2] ?? 0;
+  const touch = fighter === 0 ? [...pointerDirections.values()].reduce((sum, value) => sum + value, 0) : 0;
+  queueDirection(runtime, fighter, Math.sign(keyboard + touch), timestamp);
 }
 function showDialog(kind) {
   dialog = kind;
@@ -68,12 +140,14 @@ function showDialog(kind) {
   $('#pause').setAttribute('aria-label', kind ? 'Resume game' : 'Pause game');
   if (!kind) { canvas.focus({ preventScroll: true }); return; }
   const result = kind === 'result';
+  const pvp = runtime.mode === 'pvp';
   const winner = runtime.world.winner;
-  const title = winner === 'draw' ? 'A draw.' : winner === 'player' ? 'Panalo! You win.' : 'Kalaban wins.';
+  const title = winner === 'draw' ? 'A draw.' : pvp ? (winner === 'player' ? 'Panalo si P1.' : 'Panalo si P2.') : (winner === 'player' ? 'Panalo! You win.' : 'Kalaban wins.');
   $('#dialog-title').textContent = result ? title : 'Fight paused.';
   $('#dialog-copy').textContent = result ? 'The round is over. Start a fresh fight when you’re ready.' : 'Take a moment. Resume when you’re ready.';
-  $('#help-grid').hidden = result;
-  $('#dialog-footnote').hidden = result;
+  $('#help-grid').hidden = result || pvp;
+  $('#pvp-help').hidden = result || !pvp;
+  $('#dialog-footnote').hidden = result || pvp;
   $('#dialog-restart').hidden = result;
   $('#resume').textContent = result ? 'Laban ulit / Fight again →' : 'Tuloy / Resume →';
   $('#resume').setAttribute('aria-label', result ? 'Restart fight' : 'Resume game');
@@ -81,10 +155,12 @@ function showDialog(kind) {
   $('#resume').focus();
 }
 function setPaused(value) {
+  if (!matchStarted) return;
   if (runtime.world.status === 'ended') return;
   clearInput(); pauseRuntime(runtime, value); showDialog(value ? 'pause' : null);
 }
 function restart() {
+  if (!matchStarted) return;
   clearInput(); restartRuntime(runtime); $('#round-announcement').textContent = '';
   for (const rig of rigs) { rig.update(runtime.world.fighters[rig.index].x, runtime.world.fighters[rig.index]); silks[rig.index].update(rig, runtime.world.fighters[rig.index]); }
   showDialog(null);
@@ -96,21 +172,22 @@ $('#help').addEventListener('click', () => setPaused(true));
 $('#reset').addEventListener('click', restart);
 for (const kind of ['dash', 'bite', 'drop', 'web', 'shoot']) {
   const button = $('#' + kind);
-  button.addEventListener('pointerdown', event => { event.preventDefault(); queueAction(runtime, kind, event.timeStamp); });
-  button.addEventListener('click', event => { if (event.detail === 0) queueAction(runtime, kind, event.timeStamp); });
+  button.addEventListener('pointerdown', event => { event.preventDefault(); queueAction(runtime, 0, kind, event.timeStamp); });
+  button.addEventListener('click', event => { if (event.detail === 0) queueAction(runtime, 0, kind, event.timeStamp); });
 }
 for (const button of document.querySelectorAll('[data-direction]')) {
   button.addEventListener('pointerdown', event => {
     event.preventDefault();
     if (!runtime.ready || runtime.paused || runtime.world.status !== 'playing') return;
     button.setPointerCapture(event.pointerId);
-    pointerDirections.set(event.pointerId, Number(button.dataset.direction)); directionInput(event.timeStamp);
+    pointerDirections.set(event.pointerId, Number(button.dataset.direction)); directionInput(0, event.timeStamp);
   });
   for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) button.addEventListener(type, event => {
-    if (pointerDirections.delete(event.pointerId)) directionInput(event.timeStamp);
+    if (pointerDirections.delete(event.pointerId)) directionInput(0, event.timeStamp);
   });
 }
 window.addEventListener('keydown', event => {
+  if (!matchStarted) return;
   if (dialog && event.code === 'Tab') {
     const buttons = [$('#resume'), $('#dialog-restart')].filter(button => !button.hidden);
     const current = buttons.indexOf(document.activeElement);
@@ -118,20 +195,22 @@ window.addEventListener('keydown', event => {
     event.preventDefault(); return;
   }
   if (event.target instanceof HTMLButtonElement && ['Space', 'Enter'].includes(event.code)) return;
-  if (['ArrowLeft', 'ArrowRight', 'ArrowDown', 'Space', 'ShiftLeft', 'ShiftRight', 'KeyA', 'KeyD', 'KeyJ', 'KeyK', 'KeyS', 'KeyC'].includes(event.code)) event.preventDefault();
+  const binding = bindings[event.code];
+  if (binding) event.preventDefault();
   if (event.repeat) return;
   if (event.code === 'KeyR') { restart(); return; }
   if (event.code === 'Escape') { setPaused(!runtime.paused); return; }
   if (event.code === 'KeyH' || event.key === '?') { setPaused(true); return; }
   if (!runtime.ready || runtime.paused || runtime.world.status !== 'playing') return;
-  if (event.code === 'KeyK') queueAction(runtime, 'shoot', event.timeStamp);
-  if (event.code === 'KeyJ') queueAction(runtime, 'bite', event.timeStamp);
-  if (event.code === 'ArrowDown' || event.code === 'KeyS') queueAction(runtime, 'drop', event.timeStamp);
-  if (event.code === 'KeyC') queueAction(runtime, 'web', event.timeStamp);
-  if (['Space', 'ShiftLeft', 'ShiftRight'].includes(event.code)) queueAction(runtime, 'dash', event.timeStamp);
-  if (['KeyA', 'KeyD', 'ArrowLeft', 'ArrowRight'].includes(event.code)) { held.add(event.code); directionInput(event.timeStamp); }
+  if (!binding) return;
+  if (binding[0] === 'action') queueAction(runtime, binding[1], binding[2], event.timeStamp);
+  else { held[binding[1]].add(event.code); directionInput(binding[1], event.timeStamp); }
 });
-window.addEventListener('keyup', event => { if (held.delete(event.code)) directionInput(event.timeStamp); });
+window.addEventListener('keyup', event => {
+  for (let fighter = 0; fighter < held.length; fighter++) {
+    if (held[fighter].delete(event.code)) directionInput(fighter, event.timeStamp);
+  }
+});
 window.addEventListener('blur', () => { clearInput(); setPaused(true); });
 document.addEventListener('visibilitychange', () => { if (document.hidden) { clearInput(); setPaused(true); } });
 
@@ -181,11 +260,11 @@ renderer.setAnimationLoop(time => {
   $('#cooldown').style.width = `${100 * (1 - player.cooldown / RULES.dashCooldown)}%`;
   for (const button of document.querySelectorAll('[data-direction]')) {
     button.disabled = feedback.movementDisabled;
-    button.classList.toggle('pressed', !feedback.movementDisabled && runtime.direction === Number(button.dataset.direction));
+    button.classList.toggle('pressed', !feedback.movementDisabled && runtime.controls[0].direction === Number(button.dataset.direction));
   }
   renderer.render(scene, camera);
 });
 if (import.meta.env.DEV) window.__spiderDerby = {
-  getState: () => ({ ...structuredClone(runtime.world), paused: runtime.paused, ready: runtime.ready, loadedModels: rigs.length }), rules: { ...RULES, ...COMBAT },
+  getState: () => ({ ...structuredClone(runtime.world), paused: runtime.paused, ready: runtime.ready, mode: runtime.mode, matchStarted, assetsReady, loadedModels: rigs.length }), rules: { ...RULES, ...COMBAT },
   inspectScene: () => ({ stick: STICK, rigs: rigs.map(inspectRig), drawCalls: renderer.info.render.calls, triangles: renderer.info.render.triangles }),
 };

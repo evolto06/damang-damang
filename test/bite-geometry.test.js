@@ -74,7 +74,7 @@ test('physical contact at the calibrated range touches GLB triangles; just outsi
 });
 test('the first displayed damage frame retains real fang contact even with six-tick catch-up; pause/reset clear it', () => {
   const runtime = createRuntime(); runtime.world = closeWorld(0.01); setReady(runtime, true);
-  frameRuntime(runtime, 0); queueAction(runtime, 'bite', 1);
+  frameRuntime(runtime, 0); queueAction(runtime, 0, 'bite', 1);
   for (const time of [100, 200, 300, 400]) frameRuntime(runtime, time);
   assert.equal(runtime.world.fighters[1].hp, 80);
   assert.ok(runtime.world.hitstop > 0); assertVisibleContact(runtime.world);

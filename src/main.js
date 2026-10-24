@@ -1,19 +1,36 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RULES } from './movement.js';
-import { COMBAT, clearGap } from './combat.js';
+import { COMBAT } from './combat.js';
 import { createAI, decideAI } from './ai.js';
 import { createRuntime, clearActions, setReady, queueAction, queueDirection, pauseRuntime, restartRuntime, frameRuntime } from './runtime.js';
 import './style.css';
+import { createGameAudio } from './audio.js';
 import { createStreet, createHeldStick, STICK } from './scene.js';
 import { createSpiderRig, inspectRig } from './spider-rig.js';
-import { fightFeedback } from './feedback.js';
-import { fitPlayCamera } from './camera.js';
+import { fightFeedback, hintsFor } from './feedback.js';
+import { fitPlayCamera, followCameraFocus } from './camera.js';
 import { createWebEffects } from './web-effects.js';
 import { createSilkLine } from './silk.js';
 import { createControllerInput, combinedDirection } from './controller.js';
 
-const $ = selector => document.querySelector(selector);
+const elements = new Map([...document.querySelectorAll('[id]')].map(element => ['#' + element.id, element]));
+const $ = selector => elements.get(selector);
+const directionButtons = [...document.querySelectorAll('[data-direction]')];
+const controllerStatuses = [...document.querySelectorAll('[data-controller-status]')];
+const setText = (element, value) => { if (element.textContent !== value) element.textContent = value; };
+const setAttribute = (element, name, value) => { value = String(value); if (element.getAttribute(name) !== value) element.setAttribute(name, value); };
+const setStyle = (element, name, value) => { if (element.style[name] !== value) element.style[name] = value; };
+const touchDevice = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+const inputSources = [touchDevice ? 'touch' : 'keyboard', 'keyboard'];
+const audio = createGameAudio();
+let hintsEnabled = true;
+try { hintsEnabled = localStorage.getItem('damang-button-hints') !== 'off'; audio.setMuted(localStorage.getItem('damang-muted') === 'on'); } catch {}
+$('#button-hints').checked = hintsEnabled;
+$('#button-hints').addEventListener('change', event => { hintsEnabled = event.target.checked; try { localStorage.setItem('damang-button-hints', hintsEnabled ? 'on' : 'off'); } catch {} });
+function updateMute() { setAttribute($('#mute'), 'aria-pressed', audio.muted); setText($('#mute'), audio.muted ? 'Unmute sound' : 'Mute sound'); }
+updateMute();
+$('#mute').addEventListener('click', () => { audio.setMuted(!audio.muted); audio.unlock(); updateMute(); try { localStorage.setItem('damang-muted', audio.muted ? 'on' : 'off'); } catch {} });
 const canvas = $('#scene');
 const BINDS = {
   bot: {
@@ -35,13 +52,13 @@ const startButton = $('#start-bot');
 const pvpButton = $('#start-pvp');
 const startStatus = $('#start-status');
 function launchError(message) {
+  if (window.__damangBoot) window.__damangBoot.failed = true;
   startStatus.textContent = message;
   startStatus.dataset.state = 'error';
   startButton.disabled = true;
   pvpButton.disabled = true;
   $('#start-retry').hidden = false;
 }
-$('#start-retry').addEventListener('click', () => window.location.reload());
 const scene = new THREE.Scene();
 let renderer;
 try {
@@ -67,17 +84,27 @@ const held = [new Set(), new Set()];
 const pointerDirections = new Map();
 const controller = createControllerInput();
 const controllerDirections = [0, 0];
+runtime.inputSources = inputSources;
+const cameraFocus = { x: 0, halfSpan: 6.3 };
+let viewWidth = canvas.clientWidth, viewHeight = canvas.clientHeight, previousFrame = null;
+let markerTop = 180;
+let resultAt = null;
+const markers = [$('#player-marker'), $('#opponent-marker')].map(element => ({ element, name: element.firstElementChild, hint: element.lastElementChild }));
+const markerPoint = new THREE.Vector3();
+const healthUI = ['player', 'opponent'].map(prefix => ({ hp: $('#' + prefix + '-hp'), health: $('#' + prefix + '-health'), fill: $('#' + prefix + '-health').firstElementChild, phase: $('#' + prefix + '-phase') }));
+const actionUI = Object.fromEntries(['shoot', 'bite', 'dash', 'drop', 'web'].map(kind => [kind, { button: $('#' + kind), caption: $('#' + kind + '-status'), label: $('#' + kind).querySelector('strong').textContent }]));
 let rigs = [];
 let silks = [];
 let dialog = null;
 const assetStatus = $('#asset-status');
-new GLTFLoader().load('/models/spider.glb', gltf => {
+new GLTFLoader().load(import.meta.env.BASE_URL + 'models/spider.glb', gltf => {
   rigs = [createSpiderRig(gltf.scene, 0), createSpiderRig(gltf.scene, 1)];
   for (const rig of rigs) heldStickRoot.add(rig.root);
   silks = rigs.map(() => createSilkLine(heldStickRoot));
   silks.forEach(silk => silk.setResolution(canvas.clientWidth, canvas.clientHeight));
   clearInput();
   assetsReady = true;
+  if (window.__damangBoot) window.__damangBoot.ready = true;
   startButton.disabled = false;
   pvpButton.disabled = false;
   startStatus.textContent = 'Ready when you are. Choose Bot Match or PvP to begin.';
@@ -93,6 +120,8 @@ function applyMode(mode) {
   $('#opponent-name').textContent = pvp ? 'P2' : 'Kalaban';
   $('#player-detail').hidden = pvp;
   $('#opponent-detail').hidden = pvp;
+  setText(markers[0].name, pvp ? 'P1' : 'Ikaw');
+  setText(markers[1].name, pvp ? 'P2' : 'Kalaban');
   $('#move-hint').textContent = pvp ? 'A / D' : 'A / D · ← / →';
   $('#player-health').setAttribute('aria-label', pvp ? 'P1 health' : 'Your health');
   $('#opponent-health').setAttribute('aria-label', pvp ? 'P2 health' : 'Opponent health');
@@ -103,10 +132,17 @@ function applyMode(mode) {
   $('#web').setAttribute('aria-label', `Shoot silk and return to the stick. ${pvp ? 'W' : 'C'}`);
 }
 function startMatch(mode) {
+  if (navigator.userActivation?.isActive) audio.unlock();
   controller.selectMode(mode);
   if (!assetsReady || matchStarted) return;
   matchStarted = true;
   runtime.mode = mode;
+  restartRuntime(runtime, performance.now(), $('#stage-choice').value);
+  heldStickRoot.setStage(runtime.world.stage);
+  setText($('#stage-name'), runtime.world.stage.name);
+  cameraFocus.x = (runtime.world.fighters[0].x + runtime.world.fighters[1].x) / 2;
+  cameraFocus.halfSpan = 6.3;
+  resultAt = null; audio.reset();
   bindings = BINDS[mode];
   applyMode(mode);
   clearInput();
@@ -144,11 +180,12 @@ function showDialog(kind) {
   $('#pause').setAttribute('aria-label', kind ? 'Resume game' : 'Pause game');
   if (!kind) { canvas.focus({ preventScroll: true }); return; }
   const result = kind === 'result';
+  $('#button-hints').parentElement.hidden = result;
   const pvp = runtime.mode === 'pvp';
   const winner = runtime.world.winner;
   const title = winner === 'draw' ? 'A draw.' : pvp ? (winner === 'player' ? 'Panalo si P1.' : 'Panalo si P2.') : (winner === 'player' ? 'Panalo! You win.' : 'Kalaban wins.');
   $('#dialog-title').textContent = result ? title : 'Fight paused.';
-  $('#dialog-copy').textContent = result ? 'The round is over. Start a fresh fight when you’re ready.' : 'Take a moment. Resume when you’re ready.';
+  $('#dialog-copy').textContent = result ? (runtime.world.endReason === 'timeout' ? 'Time is up. The spider with more health wins; equal health is a draw.' : 'The round is over. Start a fresh fight when you’re ready.') : 'Take a moment. Resume when you’re ready.';
   $('#help-grid').hidden = result || pvp;
   $('#pvp-help').hidden = result || !pvp;
   $('#dialog-footnote').hidden = result || pvp;
@@ -164,11 +201,22 @@ function setPaused(value) {
   clearInput(); pauseRuntime(runtime, value); showDialog(value ? 'pause' : null);
 }
 function restart() {
-  if (!matchStarted) return;
+  if (!matchStarted || (runtime.world.status === 'ended' && dialog !== 'result')) return;
+  resultAt = null; audio.reset();
   clearInput(); restartRuntime(runtime); $('#round-announcement').textContent = '';
   for (const rig of rigs) { rig.update(runtime.world.fighters[rig.index].x, runtime.world.fighters[rig.index]); silks[rig.index].update(rig, runtime.world.fighters[rig.index]); }
   showDialog(null);
 }
+function changeMode() {
+  clearInput(); setReady(runtime, false); audio.reset(); resultAt = null;
+  matchStarted = false; dialog = null;
+  $('#overlay').hidden = true; $('#start-screen').hidden = false;
+  $('#game').classList.add('at-menu'); $('#match-ui').inert = true;
+  setAttribute($('#match-ui'), 'aria-hidden', 'true');
+  canvas.tabIndex = -1; setAttribute(canvas, 'aria-hidden', 'true');
+  $('#round-announcement').textContent = ''; startButton.focus();
+}
+$('#change-mode').addEventListener('click', changeMode);
 $('#pause').addEventListener('click', () => setPaused(!runtime.paused));
 $('#resume').addEventListener('click', () => runtime.world.status === 'ended' ? restart() : setPaused(false));
 $('#dialog-restart').addEventListener('click', restart);
@@ -176,13 +224,14 @@ $('#help').addEventListener('click', () => setPaused(true));
 $('#reset').addEventListener('click', restart);
 for (const kind of ['dash', 'bite', 'drop', 'web', 'shoot']) {
   const button = $('#' + kind);
-  button.addEventListener('pointerdown', event => { event.preventDefault(); queueAction(runtime, 0, kind, event.timeStamp); });
+  button.addEventListener('pointerdown', event => { event.preventDefault(); audio.unlock(); inputSources[0] = event.pointerType === 'touch' ? 'touch' : 'keyboard'; queueAction(runtime, 0, kind, event.timeStamp); });
   button.addEventListener('click', event => { if (event.detail === 0) queueAction(runtime, 0, kind, event.timeStamp); });
 }
-for (const button of document.querySelectorAll('[data-direction]')) {
+for (const button of directionButtons) {
   button.addEventListener('pointerdown', event => {
     event.preventDefault();
     if (!runtime.ready || runtime.paused || runtime.world.status !== 'playing') return;
+    audio.unlock(); inputSources[0] = event.pointerType === 'touch' ? 'touch' : 'keyboard';
     button.setPointerCapture(event.pointerId);
     pointerDirections.set(event.pointerId, Number(button.dataset.direction)); directionInput(0, event.timeStamp);
   });
@@ -193,7 +242,7 @@ for (const button of document.querySelectorAll('[data-direction]')) {
 window.addEventListener('keydown', event => {
   if (!matchStarted) return;
   if (dialog && event.code === 'Tab') {
-    const buttons = [$('#resume'), $('#dialog-restart')].filter(button => !button.hidden);
+    const buttons = [$('#button-hints'), $('#mute'), $('#resume'), $('#dialog-restart'), $('#change-mode')].filter(button => !button.hidden && !button.parentElement.hidden);
     const current = buttons.indexOf(document.activeElement);
     buttons[(current + (event.shiftKey ? buttons.length - 1 : 1)) % buttons.length].focus();
     event.preventDefault(); return;
@@ -207,6 +256,7 @@ window.addEventListener('keydown', event => {
   if (event.code === 'KeyH' || event.key === '?') { setPaused(true); return; }
   if (!runtime.ready || runtime.paused || runtime.world.status !== 'playing') return;
   if (!binding) return;
+  audio.unlock(); inputSources[binding[1]] = 'keyboard';
   if (binding[0] === 'action') queueAction(runtime, binding[1], binding[2], event.timeStamp);
   else { held[binding[1]].add(event.code); directionInput(binding[1], event.timeStamp); }
 });
@@ -220,8 +270,10 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) { cle
 
 function resize() {
   const width = canvas.clientWidth, height = canvas.clientHeight;
+  viewWidth = width; viewHeight = height;
+  markerTop = document.querySelector('.fighters').getBoundingClientRect().bottom - canvas.getBoundingClientRect().top + 12;
   renderer.setSize(width, height, false);
-  fitPlayCamera(camera, width, height);
+  fitPlayCamera(camera, width, height, cameraFocus);
   silks.forEach(silk => silk.setResolution(width, height));
 }
 window.addEventListener('resize', resize);
@@ -236,15 +288,15 @@ function pollController(time) {
   }
   const result = controller.poll(gamepads, time, {
     started: matchStarted, ready: assetsReady, paused: runtime.paused,
-    ended: runtime.world.status === 'ended', focused: document.hasFocus() && !document.hidden, mode: runtime.mode,
+    ended: matchStarted && runtime.world.status === 'ended', focused: document.hasFocus() && !document.hidden, mode: runtime.mode,
   });
   const slots = result.slots.map((slot, index) => matchStarted && runtime.mode === 'bot' && index === 1 ? 'P2: AI (second controller idle)' : `P${index + 1}: ${!slot.connected ? 'keyboard available · optional pad' : !slot.armed ? 'keyboard available · release pad buttons' : 'keyboard + controller ready'}`).join(' · ');
   const status = !available ? 'Controller access unavailable. Keyboard controls work in both modes; touch controls P1.'
     : `${slots}${result.unsupported ? ' · Unrecognized layout: browser standard mapping required.' : ''}${matchStarted ? ' · Start / Options pauses or resumes.' : ' · D-pad ↑ Bot / ↓ PvP; bottom face confirms.'}`;
-  for (const element of document.querySelectorAll('[data-controller-status]')) if (element.textContent !== status) element.textContent = status;
+  for (const element of controllerStatuses) if (element.textContent !== status) element.textContent = status;
   if (!matchStarted) {
-    startButton.setAttribute('aria-pressed', String(result.selectedMode === 'bot'));
-    pvpButton.setAttribute('aria-pressed', String(result.selectedMode === 'pvp'));
+    setAttribute(startButton, 'aria-pressed', result.selectedMode === 'bot');
+    setAttribute(pvpButton, 'aria-pressed', result.selectedMode === 'pvp');
   }
   if (result.command) {
     if (result.command === 'start') startMatch(result.selectedMode);
@@ -253,17 +305,21 @@ function pollController(time) {
     return;
   }
   for (const direction of result.directions) {
+    if (direction.value) inputSources[direction.fighter] = 'controller';
     controllerDirections[direction.fighter] = direction.value;
     directionInput(direction.fighter, direction.at);
   }
-  for (const action of result.actions) queueAction(runtime, action.fighter, action.kind, action.at);
+  for (const action of result.actions) { inputSources[action.fighter] = 'controller'; queueAction(runtime, action.fighter, action.kind, action.at); }
 }
 
 renderer.setAnimationLoop(time => {
   pollController(time);
   frameRuntime(runtime, time);
   const world = runtime.world;
-  if (world.status === 'ended' && dialog !== 'result') { clearInput(); showDialog('result'); }
+  if (matchStarted && world.status === 'ended' && dialog !== 'result') {
+    if (resultAt === null) { resultAt = time + 1000; clearInput(); }
+    if (time >= resultAt) showDialog('result');
+  }
   const alpha = runtime.ready && !runtime.paused && world.status === 'playing' ? runtime.alpha : 1;
   const shown = renderFighters(world, alpha);
   for (const rig of rigs) {
@@ -271,34 +327,56 @@ renderer.setAnimationLoop(time => {
     rig.update(x, fighter); silks[rig.index].update(rig, fighter);
   }
   webEffects.update(world, shown.map(item => item.fighter), alpha);
+  const delta = previousFrame === null ? 0 : Math.min(0.1, (time - previousFrame) / 1000); previousFrame = time;
+  followCameraFocus(cameraFocus, shown.map(item => item.fighter), world.stage, delta);
+  fitPlayCamera(camera, viewWidth, viewHeight, cameraFocus);
   const feedback = fightFeedback(runtime);
-  const prompt = $('#fight-prompt');
-  if (prompt.textContent !== feedback.prompt) prompt.textContent = feedback.prompt;
+  setText($('#fight-prompt'), feedback.prompt);
+  setText($('#round-time'), String(Math.ceil(world.remainingTicks / COMBAT.tickRate)));
   for (const [index, fighter] of world.fighters.entries()) {
-    const prefix = index ? 'opponent' : 'player';
-    $('#' + prefix + '-hp').textContent = `${fighter.hp} / ${COMBAT.maxHealth}`;
-    const health = $('#' + prefix + '-health');
-    health.setAttribute('aria-valuenow', fighter.hp);
-    health.firstElementChild.style.width = `${fighter.hp}%`;
-    const phase = $('#' + prefix + '-phase');
-    phase.textContent = feedback.phases[index];
-    phase.dataset.phase = fighter.phase;
+    const ui = healthUI[index];
+    setText(ui.hp, `${fighter.hp} / ${COMBAT.maxHealth}`);
+    setAttribute(ui.health, 'aria-valuenow', fighter.hp);
+    setStyle(ui.fill, 'width', `${fighter.hp}%`);
+    setText(ui.phase, feedback.phases[index]);
+    if (ui.phase.dataset.phase !== fighter.phase) ui.phase.dataset.phase = fighter.phase;
   }
-  $('#distance').innerHTML = `${clearGap(world).toFixed(1)} <small>u</small>`;
-  $('#distance-fill').style.width = `${Math.min(100, clearGap(world) / 7 * 100)}%`;
   const player = world.fighters[0];
+  const chosenHints = world.fighters.map((_, index) => hintsEnabled && matchStarted && !runtime.paused && !dialog && (index === 0 || runtime.mode === 'pvp') ? hintsFor(world, index, runtime.mode, inputSources[index]) : []);
   for (const [kind, state] of Object.entries(feedback.actions)) {
-    const button = $('#' + kind);
-    button.disabled = state.disabled;
-    $('#' + kind + '-status').textContent = state.caption;
-    button.title = state.disabled ? `${button.querySelector('strong').textContent}: ${state.caption}` : button.getAttribute('aria-label');
+    const ui = actionUI[kind];
+    if (ui.button.disabled !== state.disabled) ui.button.disabled = state.disabled;
+    setText(ui.caption, state.caption);
+    const readyCaption = String(!state.disabled);
+    if (ui.caption.dataset.ready !== readyCaption) ui.caption.dataset.ready = readyCaption;
+    setAttribute(ui.button, 'title', state.disabled ? `${ui.label}: ${state.caption}` : ui.button.getAttribute('aria-label'));
+    ui.button.classList.toggle('hint-active', inputSources[0] === 'touch' && chosenHints[0].some(hint => hint.action === kind));
   }
   $('#dash').classList.toggle('cooling', feedback.cooling);
-  $('#cooldown').style.width = `${100 * (1 - player.cooldown / RULES.dashCooldown)}%`;
-  for (const button of document.querySelectorAll('[data-direction]')) {
-    button.disabled = feedback.movementDisabled;
+  setStyle($('#cooldown'), 'width', `${100 * (1 - player.cooldown / RULES.dashCooldown)}%`);
+  for (const button of directionButtons) {
+    if (button.disabled !== feedback.movementDisabled) button.disabled = feedback.movementDisabled;
     button.classList.toggle('pressed', !feedback.movementDisabled && runtime.controls[0].direction === Number(button.dataset.direction));
+    const clearDirection = player.air.clearDirection ?? 0;
+    button.classList.toggle('hint-active', inputSources[0] === 'touch' && chosenHints[0].some(hint => hint.action === 'move') && (!clearDirection || clearDirection === Number(button.dataset.direction)));
   }
+  heldStickRoot.updateMatrixWorld(true);
+  const close = Math.abs(shown[0].x - shown[1].x) < 2.8;
+  let firstMarkerY = 0;
+  for (const [index, marker] of markers.entries()) {
+    marker.element.hidden = !matchStarted || !!dialog;
+    if (marker.element.dataset.input !== inputSources[index]) marker.element.dataset.input = inputSources[index];
+    setText(marker.hint, chosenHints[index].map(hint => hint.text).join(' · '));
+    markerPoint.set(shown[index].x, 0.48, 0);
+    heldStickRoot.localToWorld(markerPoint); markerPoint.project(camera);
+    const x = Math.max(70, Math.min(viewWidth - 70, (markerPoint.x + 1) * viewWidth / 2));
+    const labelHeight = marker.element.offsetHeight;
+    // Keep both labels below the HUD; close fighters use distinct rows even at the clamp.
+    const y = close && index === 1 ? firstMarkerY + labelHeight + 8 : Math.max(markerTop + labelHeight, (1 - markerPoint.y) * viewHeight / 2);
+    if (index === 0) firstMarkerY = y;
+    setStyle(marker.element, 'transform', `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%, -100%)`);
+  }
+  audio.update(world, { paused: runtime.paused || !matchStarted });
   renderer.render(scene, camera);
 });
 if (import.meta.env.DEV) window.__spiderDerby = {

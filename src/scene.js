@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { AIR } from './aerial.js';
+import { getStage } from './stage.js';
 
 const RIGHT_GROWTH = AIR.stickRight - 7.7;
 const STICK_LIFT = AIR.stickY - 1.4;
@@ -88,13 +89,23 @@ export function createStreet(scene) {
   }
   return street;
 }
-export function createHeldStick(scene) {
+export function createHeldStick(scene, stage = 'single') {
   const root = new THREE.Group(); root.position.y = STICK.y; scene.add(root);
-  const twig = new THREE.Mesh(new THREE.CylinderGeometry(AIR.leftRadius, STICK.radius, STICK.halfLength + STICK.rightEnd, 10), material('#776044'));
-  twig.position.x = (STICK.rightEnd - STICK.halfLength) / 2;
-  twig.rotation.z = Math.PI / 2; twig.castShadow = true; root.add(twig);
-  for (const x of [-8.7, -4.35, 0, 4.35, 8.7]) {
-    const node = new THREE.Mesh(new THREE.TorusGeometry(0.073, 0.009, 4, 10), material('#8c7350')); node.rotation.y = Math.PI / 2; node.position.x = x; root.add(node);
+  const geometryNodes = [];
+  function drawTwigs(layout) {
+    for (const node of geometryNodes) { root.remove(node); node.geometry?.dispose(); }
+    geometryNodes.length = 0;
+    for (const { body: [left, right] } of layout.sticks) {
+      const twig = new THREE.Mesh(new THREE.CylinderGeometry(AIR.leftRadius, STICK.radius, right - left, 10), material('#776044'));
+      twig.name = 'Twig'; twig.position.x = (left + right) / 2;
+      twig.rotation.z = Math.PI / 2; twig.castShadow = true;
+      root.add(twig); geometryNodes.push(twig);
+      for (let x = left + 1.35; x < right - 0.7; x += 4.35) {
+        const radius = AIR.leftRadius + (STICK.radius - AIR.leftRadius) * (x - left) / (right - left);
+        const node = new THREE.Mesh(new THREE.TorusGeometry(radius, 0.009, 4, 10), material('#8c7350'));
+        node.rotation.y = Math.PI / 2; node.position.x = x; root.add(node); geometryNodes.push(node);
+      }
+    }
   }
   // A palm on the far side, curled fingers on the camera side and a thumb
   // crossing above the twig establish an actual enclosing hand grip. The
@@ -117,5 +128,16 @@ export function createHeldStick(scene) {
   const shirt = '#697e83';
   link(holder, shirt, [8.0, -1.65 - STICK_LIFT, -0.5], [8.48, -1.86 - STICK_LIFT, -0.64], 0.45, 0.53);
   ellipsoid(holder, shirt, [9, -2.57 - STICK_LIFT, -0.9], [1.15, 1.36, 0.65]);
+  const leftHolder = holder.clone(true); leftHolder.name = 'Left holder'; leftHolder.scale.x = -1; root.add(leftHolder);
+  root.setStage = value => {
+    const layout = getStage(value); drawTwigs(layout);
+    holder.position.x = STICK.holderOffset + (layout.sticks.at(-1).body[1] - STICK.rightEnd);
+    leftHolder.visible = layout.sticks.length > 1;
+    leftHolder.position.x = layout.sticks[0].body[0] + 0.6 + 6.5;
+    root.userData.stage = layout.id;
+  };
+  root.setStage(stage);
+  // Restore twig-first child order after rebuilding, used by geometric inspection.
+  root.children.sort((a, b) => Number(b.name === 'Twig') - Number(a.name === 'Twig'));
   return root;
 }

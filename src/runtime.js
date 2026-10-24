@@ -22,8 +22,9 @@ export function runClock(clock, timestamp, callback) {
   return steps;
 }
 const createControls = () => ({ direction: 0, inputs: [] });
-export function createRuntime({ createOpponent = () => ({}), decideOpponent = () => ({}), mode = 'bot' } = {}) {
-  return { world: createWorld(), clock: createClock(), ready: false, paused: false, alpha: 1, mode, controls: [createControls(), createControls()], createOpponent, decideOpponent, ai: createOpponent() };
+export function createRuntime({ createOpponent = () => ({}), decideOpponent = () => ({}), mode = 'bot', stage = 'single' } = {}) {
+  const world = createWorld(stage);
+  return { stage: world.stage.id, world, clock: createClock(), ready: false, paused: false, alpha: 1, mode, controls: [createControls(), createControls()], createOpponent, decideOpponent, ai: createOpponent() };
 }
 export function clearActions(runtime) { for (const controls of runtime.controls) { controls.direction = 0; controls.inputs.length = 0; } }
 export function setReady(runtime, ready) { runtime.ready = ready; runtime.alpha = 1; clearActions(runtime); resetClock(runtime.clock); }
@@ -45,8 +46,8 @@ export function pauseRuntime(runtime, value) {
   if (runtime.world.status === 'ended') return false;
   runtime.paused = value; return true;
 }
-export function restartRuntime(runtime) {
-  runtime.world = createWorld(); runtime.ai = runtime.createOpponent(); runtime.paused = false; runtime.alpha = 1;
+export function restartRuntime(runtime, nowMs = 0, stage = runtime.stage) {
+  runtime.world = createWorld(stage); runtime.stage = runtime.world.stage.id; runtime.ai = runtime.createOpponent(); runtime.paused = false; runtime.alpha = 1;
   clearActions(runtime); resetClock(runtime.clock);
 }
 function sampleAction(controls, tickTime) {

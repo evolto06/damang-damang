@@ -2,16 +2,24 @@ import { createMover, moveFighter, resolveContact, RULES } from './movement.js';
 import { bitePose, biteContact, mixPose, BITE_CENTER_REACH } from './bite-profile.js';
 import { WEB, webPose, launchWeb, advanceWebs } from './web-attack.js';
 import { createAir, isAttached, releaseStick, advanceAerial } from './aerial.js';
+import { getStage, sameStick } from './stage.js';
 
-export const COMBAT = Object.freeze({ tickRate: 60, windup: 18, active: 6, recovery: 21, hitstun: 11, hitstop: 6, maxHealth: 100, damage: 20, reach: BITE_CENTER_REACH - RULES.separation, knockback: 0.25 });
+export const COMBAT = Object.freeze({ tickRate: 60, windup: 18, active: 6, recovery: 21, hitstun: 11, hitstop: 6, maxHealth: 100, damage: 20, reach: BITE_CENTER_REACH - RULES.separation, knockback: 0.25, knockOffSpeed: 2.5, roundTicks: 60 * 60 });
 export const clearGap = world => Math.max(0, Math.abs(world.fighters[1].x - world.fighters[0].x) - RULES.separation);
 
-function createFighter(id, x, forward) {
-  return { ...createMover(x, forward), id, hp: COMBAT.maxHealth, air: createAir(), phase: 'idle', phaseTicks: 0, pose: bitePose('idle'), webCooldown: 0, webId: 0, attackId: 0, attackHit: false, hitTick: -1000 };
+function createFighter(id, x, forward, stage) {
+  return { ...createMover(x, forward), id, stage, hp: COMBAT.maxHealth, air: createAir(), phase: 'idle', phaseTicks: 0, pose: bitePose('idle'), webCooldown: 0, webId: 0, attackId: 0, attackHit: false, hitTick: -1000 };
 }
-export function createWorld() {
-  const fighters = [createFighter('player', RULES.startX, 1), createFighter('opponent', RULES.opponentX, -1)];
-  return { tick: 0, status: 'playing', winner: null, hitstop: 0, projectiles: [], recoil: [0, 0], impact: null, fighters, previous: fighters.map(fighter => ({ x: fighter.x, y: fighter.air.y })), events: [] };
+export function createWorld(stageId = 'single') {
+  const stage = getStage(stageId);
+  const fighters = [createFighter('player', stage.start[0], 1, stage), createFighter('opponent', stage.start[1], -1, stage)];
+  return { stage, remainingTicks: COMBAT.roundTicks, endReason: null, tick: 0, status: 'playing', winner: null, hitstop: 0, projectiles: [], recoil: [0, 0], impact: null, fighters, previous: fighters.map(fighter => ({ x: fighter.x, y: fighter.air.y })), events: [] };
+}
+function endRound(world, reason) {
+  world.status = 'ended'; world.endReason = reason; world.projectiles = [];
+  const [a, b] = world.fighters;
+  world.winner = a.hp === b.hp ? 'draw' : a.hp > b.hp ? 'player' : 'opponent';
+  world.fighters.forEach(fighter => { fighter.velocity = 0; fighter.dashRemaining = 0; });
 }
 function faceOpponent(world) {
   if (!world.fighters.every(isAttached)) return;
@@ -32,6 +40,7 @@ function transition(fighter) {
 export function stepWorld(world, actions = [{}, {}]) {
   if (world.status !== 'playing') return world;
   world.tick++;
+  world.remainingTicks = Math.max(0, world.remainingTicks - 1);
   world.events = [];
   // Render interpolation samples the start of the current fixed tick. Hitstop
   // frames leave both ends equal, so presentation holds without ever rewinding.
@@ -43,8 +52,15 @@ export function stepWorld(world, actions = [{}, {}]) {
       const positions = world.fighters.map(fighter => fighter.x);
       world.fighters.forEach((fighter, index) => { fighter.x += world.recoil[index]; fighter.pose = fighterPose(fighter); });
       resolveContact(world.fighters, positions);
+      for (const hit of world.impact ?? []) {
+        const target = world.fighters[hit.target], source = world.fighters[hit.source];
+        if (!target.hp || !isAttached(target)) continue;
+        releaseStick(target);
+        target.air.vx = (Math.sign(target.x - source.x) || -target.forward) * COMBAT.knockOffSpeed;
+      }
       world.recoil = [0, 0]; world.impact = null;
     }
+    if (!world.remainingTicks) endRound(world, 'timeout');
     return world;
   }
   faceOpponent(world);
@@ -92,7 +108,7 @@ export function stepWorld(world, actions = [{}, {}]) {
   const hits = [];
   for (let index = 0; index < 2; index++) {
     const fighter = world.fighters[index];
-    if (fighter.phase !== 'active' || fighter.attackHit || !world.fighters.every(isAttached) || !previous.every(f => f.attached)) continue;
+    if (fighter.phase !== 'active' || fighter.attackHit || !world.fighters.every(isAttached) || !previous.every(f => f.attached) || !sameStick(world.fighters[0].x, world.fighters[1].x, world.stage)) continue;
     const contact = biteContact(fighter, world.fighters[1 - index], previous[index], previous[1 - index]);
     if (contact) hits.push({ type: 'hit', source: index, target: 1 - index, damage: COMBAT.damage, attackId: fighter.attackId, contact });
   }
@@ -113,13 +129,8 @@ export function stepWorld(world, actions = [{}, {}]) {
     enter(target, target.hp ? 'hitstun' : 'ko');
   }
   world.events = [...webHits, ...hits];
-  const [player, opponent] = world.fighters;
-  if (!player.hp || !opponent.hp) {
-    world.projectiles = [];
-    world.status = 'ended';
-    world.winner = !player.hp && !opponent.hp ? 'draw' : player.hp ? 'player' : 'opponent';
-    world.fighters.forEach(fighter => { fighter.velocity = 0; fighter.dashRemaining = 0; });
-  }
+  if (world.fighters.some(fighter => !fighter.hp)) endRound(world, 'ko');
+  else if (!world.remainingTicks) endRound(world, 'timeout');
   for (const fighter of world.fighters) if (!['idle', 'ko'].includes(fighter.phase)) fighter.phaseTicks++;
   return world;
 }

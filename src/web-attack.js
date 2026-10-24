@@ -1,7 +1,7 @@
 import { BITE } from './bite-profile.js';
 import { AIR, isAttached } from './aerial.js';
 
-export const WEB = Object.freeze({ windup: 20, release: 2, recovery: 10, stun: 40, cooldown: 150, speed: 8, lifetime: 90, range: 10, radius: 0.045, rise: BITE.webRise, curl: -2.1, clearance: 1.6, pivot: [0, 1.1, -0.55] });
+export const WEB = Object.freeze({ windup: 20, release: 2, recovery: 10, stun: 40, cooldown: 150, speed: 8, lifetime: 90, range: 3, radius: 0.045, rise: BITE.webRise, curl: -2.1, clearance: 1.6, pivot: [0, 1.1, -0.55] });
 const smooth = t => { t = Math.max(0, Math.min(1, t)); return t * t * (3 - 2 * t); };
 export function webPose(phase, ticks = 0) {
   let stand = 0, curl = 0;
@@ -52,8 +52,11 @@ export function advanceWebs(world, previous) {
   for (const shot of world.projectiles) {
     const target = world.fighters[1 - shot.source];
     shot.previous = [...shot.position];
-    shot.position = shot.position.map((value, axis) => value + shot.velocity[axis]);
-    shot.age++; shot.travelled += Math.hypot(...shot.velocity);
+    const speed = Math.hypot(...shot.velocity), remainingRange = Math.max(0, WEB.range - shot.travelled);
+    const fraction = speed > 0 ? Math.min(1, remainingRange / speed) : 0;
+    if (!fraction) continue;
+    shot.position = shot.position.map((value, axis) => value + shot.velocity[axis] * fraction);
+    shot.age++; shot.travelled += speed * fraction;
     const contact = webContact(shot, target, previous[1 - shot.source]);
     if (contact) hits.push({ type: 'webhit', source: shot.source, target: 1 - shot.source, contact });
     else if (shot.age < WEB.lifetime && shot.travelled < WEB.range) remaining.push(shot);

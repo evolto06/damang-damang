@@ -7,6 +7,8 @@ import { AIR } from './aerial.js';
 import { RULES } from './movement.js';
 import { hangingPose } from './hanging-pose.js';
 
+export const PLAYER_TINTS = Object.freeze(['#efc26f', '#a7d9d5']);
+
 export const ATTACHMENT = Object.freeze({ scale: BITE.scale, offsetY: BITE.offsetY, stride: 0.34, stance: 0.72, tolerance: 0.02 });
 
 const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
@@ -58,7 +60,7 @@ export function createSpiderRig(source, index) {
   const torso = new THREE.Group(); inverted.add(torso);
   const abdomen = new THREE.Group(); abdomen.position.fromArray(WEB.pivot); torso.add(abdomen);
   const spinneret = new THREE.Object3D(); spinneret.position.fromArray(AIR.outlet).sub(abdomen.position); abdomen.add(spinneret);
-  const material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.78, flatShading: true });
+  const material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.78, flatShading: true, color: PLAYER_TINTS[index] });
   const bodyParts = [], abdomenParts = [], mouthParts = [], legParts = new Map();
   source.traverse(mesh => {
     if (!mesh.isMesh) return;
@@ -143,7 +145,7 @@ function updateSpiderRig(rig, x, fighter) {
   rig.forward = forward; rig.facing.rotation.y = forward * Math.PI / 2;
   const phase = fighter?.phase ?? 'idle';
   const ticks = fighter?.phaseTicks ?? 0;
-  rig.material.color.set(phase === 'ko' ? '#77736b' : '#ffffff');
+  rig.material.color.set(phase === 'ko' ? '#77736b' : PLAYER_TINTS[rig.index]);
   rig.material.emissive.set(phase === 'webstun' ? '#80c5c9' : phase.startsWith('web') ? '#23666a' : phase === 'hitstun' ? '#9c2510' : phase === 'windup' || phase === 'active' ? '#815012' : '#000000');
   rig.material.emissiveIntensity = phase === 'active' ? 0.65 : phase === 'hitstun' ? 0.8 : 0.35;
   const pose = fighter?.pose ?? { ...bitePose(phase, ticks), ...webPose(phase, ticks) };

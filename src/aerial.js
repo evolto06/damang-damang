@@ -1,5 +1,6 @@
 import { BITE } from './bite-profile.js';
 import { MAP_SCALE, RULES } from './movement.js';
+import { clampToStick, clampToTwig, span, twigAt, sameStick } from './stage.js';
 
 const STICK_LIFT = 1.3;
 export const AIR = Object.freeze({ gravity: 8, terminalSpeed: 6.5, groundY: -3.3347 - STICK_LIFT, stickY: 1.4 + STICK_LIFT, stickRadius: 0.075, leftRadius: 0.066, stickLeft: -6.7 * MAP_SCALE, stickRight: 7.7 * MAP_SCALE, deployTicks: 6, swingTicks: 120, swingMinTicks: 30, reattachTicks: 18, reelSpeed: 2.6, reelSteer: 5, reelEngageVy: 1.0, reelRampTicks: 10, corridor: 4.2 * MAP_SCALE, clearance: 0.40, tailSpacing: 0.40, pump: 7, fallSteer: 5, swingDrag: 0.06, maxSwingSpeed: 6.5, swingGravity: 16, outlet: [-0.119999997, 0.716559473, -3.220000029] });
@@ -8,9 +9,12 @@ const SUBSTEPS = 8;
 const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
 const smooth = t => t * t * (3 - 2 * t);
 const smoothInverse = t => 0.5 - Math.sin(Math.asin(1 - 2 * t) / 3);
-export const stickRadiusAtX = x => AIR.leftRadius + (AIR.stickRadius - AIR.leftRadius) * clamp((x - AIR.stickLeft) / (AIR.stickRight - AIR.stickLeft), 0, 1);
-export function stickSurfaceY(x, z) {
-  const radius = stickRadiusAtX(x); let bottom = Infinity;
+export const stickRadiusAtX = (x, stage) => {
+  const [left, right] = twigAt(x, stage);
+  return AIR.leftRadius + (AIR.stickRadius - AIR.leftRadius) * clamp((x - left) / (right - left), 0, 1);
+};
+export function stickSurfaceY(x, z, stage) {
+  const radius = stickRadiusAtX(x, stage); let bottom = Infinity;
   for (let side = 0; side < 10; side++) {
     const a = side * Math.PI / 5, b = (side + 1) * Math.PI / 5;
     const za = Math.cos(a) * radius, zb = Math.cos(b) * radius;
@@ -22,7 +26,7 @@ export function stickSurfaceY(x, z) {
   return bottom;
 }
 export const isAttached = fighter => !fighter.air || fighter.air.mode === 'attached';
-export const createAir = () => ({ mode: 'attached', y: 0, vx: 0, vy: 0, ticks: 0, animationTicks: 0, anchorX: 0, anchorY: 0, anchorZ: 0, ropeLength: 0, landingX: 0, startX: 0, startY: 0, blocked: false, reelRamp: 1, exitVx: 0 });
+export const createAir = () => ({ mode: 'attached', y: 0, vx: 0, vy: 0, ticks: 0, animationTicks: 0, anchorX: 0, anchorY: 0, anchorZ: 0, ropeLength: 0, landingX: 0, startX: 0, startY: 0, blocked: false, clearDirection: 0, reelRamp: 1, exitVx: 0 });
 export function outletOffset(fighter) {
   return [fighter.forward * AIR.outlet[2] * BITE.scale, BITE.offsetY - AIR.outlet[1] * BITE.scale, fighter.forward * AIR.outlet[0] * BITE.scale];
 }
@@ -37,8 +41,8 @@ export function releaseStick(fighter) {
   const air = fighter.air, offset = outletOffset(fighter);
   air.mode = 'falling'; air.ticks = 0; air.y = 0; air.vx = fighter.velocity; air.vy = -0.12;
   air.landingX = fighter.x;
-  air.anchorX = clamp(fighter.x + offset[0], AIR.stickLeft, AIR.stickRight);
-  air.anchorZ = offset[2]; air.anchorY = stickSurfaceY(air.anchorX, air.anchorZ);
+  air.anchorX = clampToTwig(fighter.x + offset[0], fighter.x, fighter.stage);
+  air.anchorZ = offset[2]; air.anchorY = stickSurfaceY(air.anchorX, air.anchorZ, fighter.stage);
   air.reelRamp = 1;
   fighter.velocity = 0; fighter.dashRemaining = 0;
 }
@@ -50,10 +54,11 @@ export function landingSeparation(fighter, other) {
   return RULES.separation + AIR.tailSpacing * (Number(fighter.forward === side) + Number(other.forward === -side));
 }
 const ceiling = other => (other.air?.y ?? 0) - AIR.clearance;
-const underOpponent = (fighter, other) => Math.abs(fighter.x - other.x) < landingSeparation(fighter, other) - 1e-9;
-function legalBounds(fighter, other, index) {
-  let low = Math.max(-RULES.limit, fighter.air.landingX - AIR.corridor);
-  let high = Math.min(RULES.limit, fighter.air.landingX + AIR.corridor);
+const underOpponent = (fighter, other) => sameStick(fighter.x, other.x, fighter.stage) && Math.abs(fighter.x - other.x) < landingSeparation(fighter, other) - 1e-9;
+export function legalBounds(fighter, other, index) {
+  const [spanLow, spanHigh] = span(fighter.stage);
+  let low = Math.max(spanLow, fighter.air.landingX - AIR.corridor);
+  let high = Math.min(spanHigh, fighter.air.landingX + AIR.corridor);
   // A released spider may change horizontal order only below the complete
   // opponent silhouette. Against its underside, retain sideways steering.
   if (fighter.air.y > ceiling(other) + 1e-9 ||
@@ -65,7 +70,7 @@ function legalBounds(fighter, other, index) {
   // An opponent pushed past a rail can leave no legal slot. Keep the spider on
   // its own side instead of producing an empty interval that teleports it.
   if (low > high) {
-    const edge = clamp(fighter.x <= other.x ? high : low, -RULES.limit, RULES.limit);
+    const edge = clamp(fighter.x <= other.x ? high : low, spanLow, spanHigh);
     return [edge, edge];
   }
   return [low, high];
@@ -142,7 +147,7 @@ function advancePendulum(fighter, other, index, offset, direction) {
 export function advanceAerial(fighter, other, index, action) {
   const air = fighter.air;
   if (isAttached(fighter)) return false;
-  air.blocked = false;
+  air.blocked = false; air.clearDirection = 0;
   fighter.velocity = 0; fighter.dashRemaining = 0;
   fighter.cooldown = Math.max(0, fighter.cooldown - DT);
   const offset = outletOffset(fighter);
@@ -153,14 +158,14 @@ export function advanceAerial(fighter, other, index, action) {
     // sits above the current position rather than the earlier drop point. A
     // moving spider otherwise attaches to a rope angled behind it, which turns
     // most of its forward speed into radial tension and kills the swing.
-    air.anchorX = clamp(fighter.x + offset[0], AIR.stickLeft, AIR.stickRight);
+    air.anchorX = clampToTwig(fighter.x + offset[0], fighter.x, fighter.stage);
     air.anchorZ = offset[2];
-    air.anchorY = stickSurfaceY(air.anchorX, air.anchorZ);
+    air.anchorY = stickSurfaceY(air.anchorX, air.anchorZ, fighter.stage);
     air.landingX = fighter.x;
   }
   if (air.mode === 'deploying') {
-    air.anchorX = clamp(fighter.x + offset[0], AIR.stickLeft, AIR.stickRight);
-    air.anchorY = stickSurfaceY(air.anchorX, air.anchorZ);
+    air.anchorX = clampToTwig(fighter.x + offset[0], fighter.x, fighter.stage);
+    air.anchorY = stickSurfaceY(air.anchorX, air.anchorZ, fighter.stage);
   }
   if (air.mode === 'grounded') return true;
   air.ticks++; air.animationTicks = (air.animationTicks ?? 0) + 1;
@@ -213,7 +218,12 @@ export function advanceAerial(fighter, other, index, action) {
     // Finish the grip where the swing and steering actually left the spider,
     // letting a little lateral momentum glide out, instead of dragging it back
     // to the cast point during the last 18 ticks.
-    air.landingX = legalX(fighter, other, index, fighter.x + air.vx * AIR.reattachTicks * DT);
+    air.landingX = clampToStick(legalX(fighter, other, index, fighter.x + air.vx * AIR.reattachTicks * DT), fighter.x, fighter.stage);
+  }
+  if (air.blocked) {
+    const [low, high] = legalBounds(fighter, other, index);
+    const away = Math.sign(fighter.x - other.x) || -fighter.forward;
+    air.clearDirection = away < 0 && fighter.x > low + 0.02 ? -1 : away > 0 && fighter.x < high - 0.02 ? 1 : fighter.x > low + 0.02 ? -1 : fighter.x < high - 0.02 ? 1 : 0;
   }
   return true;
 }

@@ -41,7 +41,7 @@ test('recovery guidance distinguishes manual C return, automatic retrieval and g
   }
   player.air.mode = 'grounded';
   assert.equal(fightFeedback(runtime).movementDisabled, true);
-  assert.match(fightFeedback(runtime).prompt, /no time limit/);
+  assert.match(fightFeedback(runtime).prompt, /before time runs out/);
 });
 
 test('loading, pause and round result take precedence over aerial and attack guidance', () => {

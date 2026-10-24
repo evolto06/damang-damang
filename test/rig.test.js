@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { ATTACHMENT, createSpiderRig, inspectRig } from '../src/spider-rig.js';
+import { ATTACHMENT, PLAYER_TINTS, createSpiderRig, inspectRig } from '../src/spider-rig.js';
 import * as THREE from 'three';
 import { createHeldStick, STICK } from '../src/scene.js';
 import { RULES } from '../src/movement.js';
@@ -32,7 +32,7 @@ test('loaded GLB combat poses preserve inverted roots, fixed bodies and rear gri
         assert.ok(inspection.maxStanceError < ATTACHMENT.tolerance);
       }
       assert.equal(rig.mouth.position.z, 0);
-      assert.equal(rig.material.color.getHex(), 0xffffff);
+      assert.equal(rig.material.color.getHex(), new THREE.Color(PLAYER_TINTS[index]).getHex());
     }
   }
 });
@@ -68,4 +68,23 @@ test('both travel endpoints keep all spider meshes clear of the holder and feet 
   // The hand remains near the extended end and the twig spans the wider arena.
   assert.equal(STICK.halfLength, -AIR.stickLeft);
   assert.ok(STICK.gripX > RULES.limit && STICK.gripX < STICK.rightEnd);
+});
+
+// Player color and transient effects must never leak into the other fighter or GLB.
+test('fighter materials keep distinct identities and isolate KO and stun effects', async () => {
+  const file = await readFile(new URL('../public/models/spider.glb', import.meta.url));
+  const { scene } = await new GLTFLoader().parseAsync(file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength), '');
+  const sourceColors = []; scene.traverse(mesh => { if (mesh.isMesh) sourceColors.push(mesh.material.color.getHex()); });
+  const [player, opponent] = [createSpiderRig(scene, 0), createSpiderRig(scene, 1)];
+  assert.notEqual(player.material, opponent.material);
+  assert.notEqual(player.material.color.getHex(), opponent.material.color.getHex());
+  const opponentColor = opponent.material.color.getHex();
+  player.update(0, { phase: 'ko', phaseTicks: 1 });
+  assert.equal(opponent.material.color.getHex(), opponentColor);
+  player.update(0, { phase: 'webstun', phaseTicks: 1 });
+  assert.notEqual(player.material.emissive.getHex(), opponent.material.emissive.getHex());
+  player.update(0, { phase: 'idle', phaseTicks: 0 });
+  assert.equal(player.material.color.getHex(), new THREE.Color(PLAYER_TINTS[0]).getHex());
+  const after = []; scene.traverse(mesh => { if (mesh.isMesh) after.push(mesh.material.color.getHex()); });
+  assert.deepEqual(after, sourceColors);
 });

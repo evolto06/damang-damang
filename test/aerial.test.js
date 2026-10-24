@@ -16,11 +16,11 @@ test('drop releases under gravity with retained momentum; it wins simultaneous w
   const y = player.air.y, speed = player.air.vy; stepWorld(world);
   assert.ok(player.air.y < y && player.air.vy < speed); assert.equal(silkEndpoints(player).visible, false);
 });
-test('falling reaches the visible ground and remains recoverable indefinitely without an automatic web', () => {
+test('falling reaches the visible ground and stays recoverable before the round expires', () => {
   const world = createWorld(); stepWorld(world, [{ drop: true }, {}]); tick(world, 600);
   const player = world.fighters[0], ground = structuredClone(player.air);
   assert.equal(ground.mode, 'grounded'); assert.equal(ground.y, AIR.groundY);
-  tick(world, 10000); assert.deepEqual(player.air, ground);
+  tick(world, 600); assert.deepEqual(player.air, ground);
   assert.equal(player.hp, 100); assert.equal(world.status, 'playing');
   stepWorld(world, [{ web: true }, {}]); assert.equal(player.air.mode, 'deploying');
   for (let i = 0; i < 360 && !isAttached(player); i++) stepWorld(world);
@@ -103,7 +103,9 @@ test('silk fires from the cast spinneret and keeps forward momentum instead of p
   assert.ok(castAnchor - dropAnchor > 0.4, 'the spider has drifted away from where it dropped');
   for (let i = 0; i < AIR.deployTicks; i++) stepWorld(world, [{ web: true }, {}]);
   assert.equal(player.air.mode, 'swinging');
-  assert.ok(Math.abs(silkEndpoints(player).anchor[0] - castAnchor) < 1e-9);
+  assert.ok(silkEndpoints(player).anchor[0] > castAnchor, 'anchor tracks the spinneret during deployment');
+  const fixedAnchor = silkEndpoints(player).anchor;
+  for (let i = 0; i < 10; i++) { stepWorld(world); assert.deepEqual(silkEndpoints(player).anchor, fixedAnchor); }
   assert.ok(player.air.vx > 1, 'forward speed survives the catch');
 });
 

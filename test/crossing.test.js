@@ -18,7 +18,7 @@ test('real timestamped approach/drop/D/C crosses beneath AI and lands opposite a
       const [player, other] = runtime.world.fighters;
       if (player.air.mode !== 'attached') {
         const endpoints = silkEndpoints(player);
-        if (endpoints.visible) {
+        if (endpoints.visible && player.air.mode !== 'deploying') {
           if (!anchor) anchor = endpoints.anchor;
           assert.deepEqual(endpoints.anchor, anchor, 'fixed cast anchor never teleports');
         }

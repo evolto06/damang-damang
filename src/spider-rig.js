@@ -4,6 +4,7 @@ import { STICK } from './scene.js';
 import { BITE, bitePose } from './bite-profile.js';
 import { WEB, webPose } from './web-attack.js';
 import { AIR } from './aerial.js';
+import { RULES } from './movement.js';
 import { hangingPose } from './hanging-pose.js';
 
 export const ATTACHMENT = Object.freeze({ scale: BITE.scale, offsetY: BITE.offsetY, stride: 0.34, stance: 0.72, tolerance: 0.02 });
@@ -133,7 +134,7 @@ export function createSpiderRig(source, index) {
     legs.push({ name, side, number, hip, mesh, segments, original, originalNormals, clawStart, clawCenter, contact: new THREE.Vector3(), stance: true });
   }
   const rig = { root, facing, inverted, torso, abdomen, abdomenMesh, body, mouth, jaws, palps, spinneret, material, legs, forward, index, update: (x, fighter) => updateSpiderRig(rig, x, fighter) };
-  updateSpiderRig(rig, index ? 2.45 : -2.45);
+  updateSpiderRig(rig, index ? RULES.opponentX : RULES.startX);
   return rig;
 }
 function updateSpiderRig(rig, x, fighter) {

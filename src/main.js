@@ -11,6 +11,7 @@ import { fightFeedback } from './feedback.js';
 import { fitPlayCamera } from './camera.js';
 import { createWebEffects } from './web-effects.js';
 import { createSilkLine } from './silk.js';
+import { createControllerInput, combinedDirection } from './controller.js';
 
 const $ = selector => document.querySelector(selector);
 const canvas = $('#scene');
@@ -64,6 +65,8 @@ const webEffects = createWebEffects(heldStickRoot);
 const runtime = createRuntime({ createOpponent: createAI, decideOpponent: decideAI });
 const held = [new Set(), new Set()];
 const pointerDirections = new Map();
+const controller = createControllerInput();
+const controllerDirections = [0, 0];
 let rigs = [];
 let silks = [];
 let dialog = null;
@@ -100,6 +103,7 @@ function applyMode(mode) {
   $('#web').setAttribute('aria-label', `Shoot silk and return to the stick. ${pvp ? 'W' : 'C'}`);
 }
 function startMatch(mode) {
+  controller.selectMode(mode);
   if (!assetsReady || matchStarted) return;
   matchStarted = true;
   runtime.mode = mode;
@@ -117,7 +121,7 @@ function startMatch(mode) {
 }
 startButton.addEventListener('click', () => startMatch('bot'));
 pvpButton.addEventListener('click', () => startMatch('pvp'));
-function clearInput() { for (const keys of held) keys.clear(); pointerDirections.clear(); clearActions(runtime); }
+function clearInput() { for (const keys of held) keys.clear(); pointerDirections.clear(); controllerDirections.fill(0); controller.reset(); clearActions(runtime); }
 // Simulation ticks at a fixed 60 Hz; the renderer blends the last two ticks so
 // movement stays smooth on monitors that do not refresh on tick boundaries.
 function renderFighters(world, alpha) {
@@ -132,7 +136,7 @@ function directionInput(fighter, timestamp) {
   let keyboard = 0;
   for (const code of held[fighter]) keyboard += bindings[code]?.[2] ?? 0;
   const touch = fighter === 0 ? [...pointerDirections.values()].reduce((sum, value) => sum + value, 0) : 0;
-  queueDirection(runtime, fighter, Math.sign(keyboard + touch), timestamp);
+  queueDirection(runtime, fighter, combinedDirection(keyboard, touch, controllerDirections[fighter]), timestamp);
 }
 function showDialog(kind) {
   dialog = kind;
@@ -223,7 +227,40 @@ function resize() {
 window.addEventListener('resize', resize);
 resize();
 
+function pollController(time) {
+  let gamepads = [];
+  let available = typeof navigator.getGamepads === 'function';
+  if (available) {
+    try { gamepads = navigator.getGamepads(); }
+    catch { available = false; }
+  }
+  const result = controller.poll(gamepads, time, {
+    started: matchStarted, ready: assetsReady, paused: runtime.paused,
+    ended: runtime.world.status === 'ended', focused: document.hasFocus() && !document.hidden, mode: runtime.mode,
+  });
+  const slots = result.slots.map((slot, index) => matchStarted && runtime.mode === 'bot' && index === 1 ? 'P2: AI (second controller idle)' : `P${index + 1}: ${!slot.connected ? 'keyboard available · optional pad' : !slot.armed ? 'keyboard available · release pad buttons' : 'keyboard + controller ready'}`).join(' · ');
+  const status = !available ? 'Controller access unavailable. Keyboard controls work in both modes; touch controls P1.'
+    : `${slots}${result.unsupported ? ' · Unrecognized layout: browser standard mapping required.' : ''}${matchStarted ? ' · Start / Options pauses or resumes.' : ' · D-pad ↑ Bot / ↓ PvP; bottom face confirms.'}`;
+  for (const element of document.querySelectorAll('[data-controller-status]')) if (element.textContent !== status) element.textContent = status;
+  if (!matchStarted) {
+    startButton.setAttribute('aria-pressed', String(result.selectedMode === 'bot'));
+    pvpButton.setAttribute('aria-pressed', String(result.selectedMode === 'pvp'));
+  }
+  if (result.command) {
+    if (result.command === 'start') startMatch(result.selectedMode);
+    else if (result.command === 'restart') restart();
+    else setPaused(result.command === 'pause');
+    return;
+  }
+  for (const direction of result.directions) {
+    controllerDirections[direction.fighter] = direction.value;
+    directionInput(direction.fighter, direction.at);
+  }
+  for (const action of result.actions) queueAction(runtime, action.fighter, action.kind, action.at);
+}
+
 renderer.setAnimationLoop(time => {
+  pollController(time);
   frameRuntime(runtime, time);
   const world = runtime.world;
   if (world.status === 'ended' && dialog !== 'result') { clearInput(); showDialog('result'); }

@@ -6,13 +6,14 @@ import { ATTACHMENT, createSpiderRig, inspectRig } from '../src/spider-rig.js';
 import * as THREE from 'three';
 import { createHeldStick, STICK } from '../src/scene.js';
 import { RULES } from '../src/movement.js';
+import { AIR } from '../src/aerial.js';
 
 test('loaded GLB combat poses preserve inverted roots, fixed bodies and rear grips, including after KO reset', async () => {
   const file = await readFile(new URL('../public/models/spider.glb', import.meta.url));
   const { scene } = await new GLTFLoader().parseAsync(file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength), '');
   for (const index of [0, 1]) {
     const rig = createSpiderRig(scene, index);
-    for (const x of [-5.65, -1, 2.45, 5.65]) {
+    for (const x of [-RULES.limit, -1, RULES.opponentX, RULES.limit]) {
       rig.update(x, { phase: 'idle', phaseTicks: 0 });
       const neutral = inspectRig(rig);
       let rearedFeet;
@@ -64,7 +65,7 @@ test('both travel endpoints keep all spider meshes clear of the holder and feet 
     assert.ok(feet.every(foot => foot.point[0] >= -STICK.halfLength && foot.point[0] <= STICK.rightEnd));
     assert.ok(inspectRig(rig).maxStanceError < ATTACHMENT.tolerance);
   }
-  // The hand remains near the extended end and the original left end stays put.
-  assert.equal(STICK.halfLength, 6.7);
+  // The hand remains near the extended end and the twig spans the wider arena.
+  assert.equal(STICK.halfLength, -AIR.stickLeft);
   assert.ok(STICK.gripX > RULES.limit && STICK.gripX < STICK.rightEnd);
 });

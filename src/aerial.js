@@ -1,7 +1,8 @@
 import { BITE } from './bite-profile.js';
-import { RULES } from './movement.js';
+import { MAP_SCALE, RULES } from './movement.js';
 
-export const AIR = Object.freeze({ gravity: 8, terminalSpeed: 6.5, groundY: -3.3347, stickY: 1.4, stickRadius: 0.075, leftRadius: 0.066, stickLeft: -6.7, stickRight: 7.7, deployTicks: 6, swingTicks: 120, swingMinTicks: 30, reattachTicks: 18, reelSpeed: 2.6, reelSteer: 5, reelEngageVy: 1.0, reelRampTicks: 10, corridor: 4.2, clearance: 0.40, tailSpacing: 0.40, pump: 7, fallSteer: 5, swingDrag: 0.06, maxSwingSpeed: 6.5, swingGravity: 16, outlet: [-0.119999997, 0.716559473, -3.220000029] });
+const STICK_LIFT = 1.3;
+export const AIR = Object.freeze({ gravity: 8, terminalSpeed: 6.5, groundY: -3.3347 - STICK_LIFT, stickY: 1.4 + STICK_LIFT, stickRadius: 0.075, leftRadius: 0.066, stickLeft: -6.7 * MAP_SCALE, stickRight: 7.7 * MAP_SCALE, deployTicks: 6, swingTicks: 120, swingMinTicks: 30, reattachTicks: 18, reelSpeed: 2.6, reelSteer: 5, reelEngageVy: 1.0, reelRampTicks: 10, corridor: 4.2 * MAP_SCALE, clearance: 0.40, tailSpacing: 0.40, pump: 7, fallSteer: 5, swingDrag: 0.06, maxSwingSpeed: 6.5, swingGravity: 16, outlet: [-0.119999997, 0.716559473, -3.220000029] });
 const DT = 1 / 60;
 const SUBSTEPS = 8;
 const clamp = (value, low, high) => Math.max(low, Math.min(high, value));

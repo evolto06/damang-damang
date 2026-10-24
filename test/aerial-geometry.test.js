@@ -7,6 +7,7 @@ import { createWorld, stepWorld } from '../src/combat.js';
 import { createSpiderRig } from '../src/spider-rig.js';
 import { createHeldStick } from '../src/scene.js';
 import { AIR, silkEndpoints } from '../src/aerial.js';
+import { RULES } from '../src/movement.js';
 import { createSilkLine } from '../src/silk.js';
 import { fitPlayCamera } from '../src/camera.js';
 
@@ -25,7 +26,7 @@ function distanceToMesh(point, mesh, matrix = mesh.matrixWorld) {
 test('visible silk tracks the original spinneret cap and the actual tapered twig surface', () => {
   const scene = new THREE.Scene(), stick = createHeldStick(scene), rig = createSpiderRig(source, 0); stick.add(rig.root);
   const silk = createSilkLine(stick); silk.setResolution(844, 390);
-  const world = createWorld(); world.fighters[0].x = -5.65;
+  const world = createWorld(); world.fighters[0].x = -RULES.limit;
   stepWorld(world, [{ drop: true }, {}]);
   for (let i = 0; i < 30; i++) stepWorld(world);
   stepWorld(world, [{ web: true }, {}]);
@@ -58,7 +59,7 @@ test('actual attached and grounded endpoint silhouettes remain inside HUD-free c
   const camera = new THREE.OrthographicCamera(); camera.position.set(0, 0.15, 18); camera.lookAt(0, 0.4, 0);
   for (const [width, height] of [[1440, 900], [390, 844], [360, 640], [844, 390]]) {
     const bands = fitPlayCamera(camera, width, height);
-    for (const x of [-5.65, 5.65]) for (const grounded of [false, true]) {
+    for (const x of [-RULES.limit, RULES.limit]) for (const grounded of [false, true]) {
       const world = createWorld(), fighter = world.fighters[0]; fighter.x = x;
       if (grounded) { fighter.air.mode = 'grounded'; fighter.air.y = AIR.groundY; }
       rig.update(x, fighter); scene.updateMatrixWorld(true);

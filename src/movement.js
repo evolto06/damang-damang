@@ -1,5 +1,7 @@
 import { BITE } from './bite-profile.js';
-export const RULES = Object.freeze({ limit: 5.65, opponentX: 2.45, startX: -2.45, separation: BITE.separation, speed: 2.5, acceleration: 18, braking: 25, dashSpeed: 8, dashDuration: 0.14, dashCooldown: 0.9 });
+export const MAP_SCALE = 1.5;
+const BASE_LIMIT = 5.65, BASE_START = 2.45;
+export const RULES = Object.freeze({ limit: BASE_LIMIT * MAP_SCALE, opponentX: BASE_START * MAP_SCALE, startX: -BASE_START * MAP_SCALE, separation: BITE.separation, speed: 2.5, acceleration: 18, braking: 25, dashSpeed: 8, dashDuration: 0.14, dashCooldown: 0.9 });
 
 const approach = (value, target, amount) => value < target ? Math.min(value + amount, target) : Math.max(value - amount, target);
 const clamp = x => Math.max(-RULES.limit, Math.min(RULES.limit, x));

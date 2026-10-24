@@ -1,7 +1,9 @@
 import * as THREE from 'three';
 import { AIR } from './aerial.js';
 
-export const STICK = Object.freeze({ y: AIR.stickY, radius: AIR.stickRadius, halfLength: -AIR.stickLeft, rightEnd: AIR.stickRight, gripX: 7.28, holderOffset: 1 });
+const RIGHT_GROWTH = AIR.stickRight - 7.7;
+const STICK_LIFT = AIR.stickY - 1.4;
+export const STICK = Object.freeze({ y: AIR.stickY, radius: AIR.stickRadius, halfLength: -AIR.stickLeft, rightEnd: AIR.stickRight, gripX: 7.28 + RIGHT_GROWTH, holderOffset: 1 + RIGHT_GROWTH });
 const materials = new Map();
 const material = color => {
   if (!materials.has(color)) materials.set(color, new THREE.MeshStandardMaterial({ color, roughness: 0.88, flatShading: true }));
@@ -91,7 +93,7 @@ export function createHeldStick(scene) {
   const twig = new THREE.Mesh(new THREE.CylinderGeometry(AIR.leftRadius, STICK.radius, STICK.halfLength + STICK.rightEnd, 10), material('#776044'));
   twig.position.x = (STICK.rightEnd - STICK.halfLength) / 2;
   twig.rotation.z = Math.PI / 2; twig.castShadow = true; root.add(twig);
-  for (const x of [-5.8, -2.9, 0.7, 4.2]) {
+  for (const x of [-8.7, -4.35, 0, 4.35, 8.7]) {
     const node = new THREE.Mesh(new THREE.TorusGeometry(0.073, 0.009, 4, 10), material('#8c7350')); node.rotation.y = Math.PI / 2; node.position.x = x; root.add(node);
   }
   // A palm on the far side, curled fingers on the camera side and a thumb
@@ -109,10 +111,11 @@ export function createHeldStick(scene) {
   }
   link(holder, lightSkin, [6.98, -0.12, -0.15], [6.56, 0.15, 0.015], 0.13, 0.11);
   link(holder, lightSkin, [6.56, 0.15, 0.015], [6.27, 0.095, 0.05], 0.11, 0.085);
-  link(holder, skin, [6.84, -0.65, -0.23], [7.45, -1.25, -0.35], 0.23, 0.3);
-  link(holder, skin, [7.45, -1.25, -0.35], [8.04, -1.65, -0.5], 0.3, 0.36);
+  const elbowY = -1.25 - STICK_LIFT / 2;
+  link(holder, skin, [6.84, -0.65, -0.23], [7.45, elbowY, -0.35], 0.23, 0.3);
+  link(holder, skin, [7.45, elbowY, -0.35], [8.04, -1.65 - STICK_LIFT, -0.5], 0.3, 0.36);
   const shirt = '#697e83';
-  link(holder, shirt, [8.0, -1.65, -0.5], [8.48, -1.86, -0.64], 0.45, 0.53);
-  ellipsoid(holder, shirt, [9, -2.57, -0.9], [1.15, 1.36, 0.65]);
+  link(holder, shirt, [8.0, -1.65 - STICK_LIFT, -0.5], [8.48, -1.86 - STICK_LIFT, -0.64], 0.45, 0.53);
+  ellipsoid(holder, shirt, [9, -2.57 - STICK_LIFT, -0.9], [1.15, 1.36, 0.65]);
   return root;
 }

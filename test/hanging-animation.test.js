@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { createSpiderRig, inspectRig } from '../src/spider-rig.js';
 import { AIR, silkEndpoints } from '../src/aerial.js';
+import { RULES } from '../src/movement.js';
 import { createWorld, stepWorld } from '../src/combat.js';
 import { createSilkLine } from '../src/silk.js';
 import { createHeldStick } from '../src/scene.js';
@@ -51,7 +52,7 @@ test('sampled full return keeps every original mesh above pavement, clear of the
   for (const [index, direction] of [[0, -1], [1, 1]]) {
     const rig = createSpiderRig(source, index); parent.add(rig.root);
     const world = createWorld(), fighter = world.fighters[index];
-    fighter.x = index ? 5.65 : -5.65;
+    fighter.x = index ? RULES.limit : -RULES.limit;
     scene.updateMatrixWorld(true);
     const neutral = inspectRig(rig);
     stepWorld(world, index ? [{}, { drop: true }] : [{ drop: true }, {}]);

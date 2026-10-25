@@ -32,6 +32,8 @@ Touch PvP supplies a separate control set for each fighter; landscape is recomme
 
 Move close enough to bite, or shoot a web to briefly stun the opponent. Drop or retreat to evade; while falling or grounded, cast silk and steer to swing back. Choose One stick, Twin sticks, Stepped sticks or Terraces before starting. Lunges have a committed windup, a 30-damage strike that evades webs, and punishable recovery. Ground impact deals 10 damage, then 5 per second on the pavement. A round ends at zero health or after 60 seconds; higher health wins at timeout, with equal health a draw. Win two rounds to win the match; draws replay. Optional first-match coaching teaches movement, webs and bites, and remembers completion or skipping. The pause dialog contains complete controls, a button-hint switch, sound mute, and a way to change mode or arena. Sounds are synthesized in the browser after your first interaction.
 
+Stepped sticks is a two-stick uphill/downhill crossing. Terraces has two raised starting perches around a lower center fighting stick; chase across two gaps, or meet in the middle.
+
 ## Build and checks
 
 ```sh

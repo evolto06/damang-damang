@@ -26,7 +26,7 @@ test('raised twigs, grip feet, upright roll and visible spinnerets share the sim
   const twigs = parent.children.filter((child) => child.name === 'Twig');
   assert.deepEqual(
     twigs.map((twig) => twig.position.y),
-    [0, 1.25],
+    [1.25, 0, 1.25],
   );
   rig.update(fighter.x, fighter);
   assert.ok(inspectRig(rig).maxStanceError < 0.02);
@@ -54,6 +54,33 @@ test('raised twigs, grip feet, upright roll and visible spinnerets share the sim
   rig.update(fighter.x, fighter);
   assert.equal(rig.inverted.rotation.z, Math.PI);
   assert.ok(inspectRig(rig).maxStanceError < 0.02);
+});
+
+test('the Terraces center stick has its own holder, clear of both endpoint fighter poses', () => {
+  const scene = new THREE.Scene(),
+    parent = createHeldStick(scene, 'terraces');
+  const world = createWorld('terraces'),
+    fighter = world.fighters[0];
+  const rig = createSpiderRig(source, 0);
+  parent.add(rig.root);
+  const support = parent.getObjectByName('Middle holder 1');
+  assert.ok(support?.visible);
+  const hand = new THREE.Box3().setFromObject(support);
+  for (const x of world.stage.sticks[1].walk)
+    for (const forward of [-1, 1]) {
+      fighter.x = x;
+      fighter.forward = forward;
+      fighter.air.y = 0;
+      rig.update(x, fighter);
+      const body = new THREE.Box3().setFromObject(rig.root, true);
+      assert.ok(body.max.x + 0.1 < hand.min.x, 'the center holder stays beyond the playable rail');
+      assert.ok(inspectRig(rig).maxStanceError < 0.02);
+    }
+  parent.setStage('heights');
+  assert.equal(support.visible, false);
+  parent.setStage('terraces');
+  assert.equal(support.visible, true);
+  assert.equal(parent.children.filter((node) => node.name.startsWith('Middle holder')).length, 1);
 });
 
 test('raised arena camera keeps the high twig and pavement between HUD bands on all target sizes', () => {

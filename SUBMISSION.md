@@ -37,7 +37,8 @@ leave opportunities for an opponent to interrupt or punish it. Damaging hits kno
 surviving spiders off the twig. Players cast silk, steer a pendulum swing and climb
 back into the fight; landing on the pavement costs health.
 
-Four arenas offer a single twig, separated twigs and two layouts at different heights.
+Four arenas offer a single twig, separated level twigs, a two-height crossing and
+two raised perches around a lower center fighting stick.
 A shared camera follows both fighters. Players can practice against a bot or compete
 locally using a split keyboard, controllers, or touch alongside a controller. Nearby
 button hints teach the current action, while distinct fighter colors, health displays

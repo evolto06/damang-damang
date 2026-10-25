@@ -13,8 +13,28 @@ test('load, move, pause, resume and change arena without console errors', async 
   page.on('pageerror', (error) => errors.push(error.message));
   await ready(page);
   await page.locator('#stage-choice').selectOption('terraces');
+  await expect(page.locator('#arena-description')).toContainText('Three sticks');
   await page.locator('#start-bot').click();
   await expect(page.locator('#stage-name')).toHaveText('Terraces');
+  const terraces = await state(page);
+  expect(terraces.stage.sticks.map((stick) => stick.y)).toEqual([1.25, 0, 1.25]);
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const panel = document.getElementById('coaching-panel').getBoundingClientRect();
+        return ['player-marker', 'opponent-marker'].every((id) => {
+          const marker = document.getElementById(id).getBoundingClientRect();
+          return (
+            panel.right <= marker.left ||
+            panel.left >= marker.right ||
+            panel.bottom <= marker.top ||
+            panel.top >= marker.bottom
+          );
+        });
+      }),
+    )
+    .toBe(true);
+  await page.screenshot({ path: info.outputPath('terraces.png') });
   const before = (await state(page)).fighters[0].x;
   await page.keyboard.down('d');
   await expect.poll(async () => (await state(page)).fighters[0].x).toBeGreaterThan(before + 0.1);

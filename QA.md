@@ -22,6 +22,9 @@ human playtesting. Report the arena, match mode, device, and steps for any probl
    other side, fall for about half a second, then cast. The bot can follow. Try
    crossing from both heights, returning under an opponent, and following the
    open-side hint if a climb is blocked.
+   On Terraces, drop from either raised starting perch onto the lower center
+   stick, fight there, then cross to the opposite perch. Confirm the two gaps
+   and center fight feel different from the single crossing on Stepped sticks.
 4. **Local PvP.** On the demo laptop, try simultaneous keyboard inputs for P1
    and P2. Keyboards vary in how many keys they can register at once. One standard
    controller plays P2 alongside keyboard/touch P1; two controllers play P1 and P2.

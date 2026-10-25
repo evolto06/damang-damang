@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RULES } from './movement.js';
 import { COMBAT } from './combat.js';
+import { getStage } from './stage.js';
 import { createAI, decideAI } from './ai.js';
 import {
   createRuntime,
@@ -35,6 +36,9 @@ const elements = new Map(
   [...document.querySelectorAll('[id]')].map((element) => ['#' + element.id, element]),
 );
 const $ = (selector) => elements.get(selector);
+$('#stage-choice').addEventListener('change', () => {
+  $('#arena-description').textContent = getStage($('#stage-choice').value).description;
+});
 const directionButtons = [...document.querySelectorAll('[data-direction]')];
 const controllerStatuses = [...document.querySelectorAll('[data-controller-status]')];
 const setText = (element, value) => {

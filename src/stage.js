@@ -17,12 +17,14 @@ export const STAGES = Object.freeze({
   single: freezeStage({
     id: 'single',
     name: 'One stick',
+    description: 'One continuous stick for close-range duels.',
     start: [-2.45 * 1.5, 2.45 * 1.5],
     sticks: [{ walk: [-5.65 * 1.5, 5.65 * 1.5], body: [-6.7 * 1.5, 7.7 * 1.5], y: 0 }],
   }),
   twin: freezeStage({
     id: 'twin',
     name: 'Twin sticks',
+    description: 'Two level sticks. Drop and swing across the gap.',
     start: [-6.75, 6.75],
     sticks: [
       { walk: [-13.5, -0.75], body: [-15, -0.6], y: 0 },
@@ -32,6 +34,7 @@ export const STAGES = Object.freeze({
   heights: freezeStage({
     id: 'heights',
     name: 'Stepped sticks',
+    description: 'Two uneven sticks. Time your return to reach the other height.',
     start: [-6.75, 6.75],
     sticks: [
       { walk: [-13.5, -0.75], body: [-15, -0.6], y: -0.9 },
@@ -41,10 +44,13 @@ export const STAGES = Object.freeze({
   terraces: freezeStage({
     id: 'terraces',
     name: 'Terraces',
-    start: [-6.75, 6.75],
+    description:
+      'Three sticks. Drop from a raised perch to the low center, then swing up to the other side.',
+    start: [-8.5, 8.5],
     sticks: [
-      { walk: [-13.5, -0.75], body: [-15, -0.6], y: 0 },
-      { walk: [0.75, 13.5], body: [0.6, 15], y: 1.25 },
+      { walk: [-12, -5], body: [-13.5, -4.8], y: 1.25 },
+      { walk: [-2.5, 2.5], body: [-4.1, 4.1], y: 0 },
+      { walk: [5, 12], body: [4.8, 13.5], y: 1.25 },
     ],
   }),
 });

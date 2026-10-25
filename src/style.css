@@ -1852,8 +1852,8 @@ button.hint-active {
 }
 .coaching-panel {
   position: absolute;
-  top: calc(150px + env(safe-area-inset-top));
-  left: var(--edge);
+  top: calc(78px + env(safe-area-inset-top));
+  right: var(--edge);
   z-index: 5;
   display: flex;
   align-items: center;
@@ -2101,7 +2101,7 @@ button.hint-active {
     bottom: calc(5px + env(safe-area-inset-bottom));
   }
   .coaching-panel {
-    top: calc(114px + env(safe-area-inset-top));
+    top: calc(54px + env(safe-area-inset-top));
     font-size: 12px;
     padding: 5px 8px;
   }
@@ -2111,6 +2111,9 @@ button.hint-active {
   }
 }
 @media (orientation: portrait) and (max-width: 600px) {
+  .coaching-panel {
+    top: calc(150px + env(safe-area-inset-top));
+  }
   .touch-pvp .rotate-hint {
     top: calc(128px + env(safe-area-inset-top));
   }

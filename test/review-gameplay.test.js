@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createWorld, stepWorld, COMBAT } from '../src/combat.js';
 import { AIR, isAttached } from '../src/aerial.js';
 import { RULES } from '../src/movement.js';
-import { getStage, sameStick } from '../src/stage.js';
+import { getStage, sameStick, stickFor } from '../src/stage.js';
 import { createAI, decideAI } from '../src/ai.js';
 
 test('pavement impact hurts once, lingering hurts each second, and silk still recovers', () => {
@@ -67,18 +67,18 @@ test('a lunge telegraphs startup, strikes once, knocks off, and commits to recov
   assert.equal(miss.fighters[1].hp, 100);
 });
 
-test('raised arena has distinct heights, silk reaches both levels and the bot can cross either way', () => {
+test('the bot can leave the Terraces center fighting stick for either raised perch', () => {
   const stage = getStage('terraces');
   assert.equal(stage.id, 'terraces');
-  assert.ok(stage.sticks[1].y > stage.sticks[0].y);
+  assert.ok(stage.sticks[1].y < stage.sticks[0].y);
   for (const side of [-1, 1]) {
     const world = createWorld('terraces'),
       ai = createAI();
     const [player, bot] = world.fighters;
-    player.x = side * 5;
-    bot.x = -side * 5;
-    player.air.y = stage.sticks[side > 0 ? 1 : 0].y;
-    bot.air.y = stage.sticks[side > 0 ? 0 : 1].y;
+    player.x = side * 8;
+    bot.x = -side;
+    player.air.y = stickFor(player.x, stage).y;
+    bot.air.y = stickFor(bot.x, stage).y;
     let crossed = false;
     for (let t = 0; t < 1600 && world.status === 'playing'; t++) {
       stepWorld(world, [{}, decideAI(ai, world)]);
@@ -117,14 +117,14 @@ test('seeded bots mix telegraphed ranged pressure into approach without reading 
 test('a low silk anchor cannot snap a spider onto a higher rail during the final grip', () => {
   const world = createWorld('terraces'),
     fighter = world.fighters[0];
-  fighter.x = 1;
+  fighter.x = 5.2;
   Object.assign(fighter.air, {
     mode: 'reeling',
     y: -0.25,
     targetY: 0,
-    anchorX: -1.2,
+    anchorX: 2,
     anchorY: -0.07,
-    landingX: 1,
+    landingX: 5.2,
   });
   stepWorld(world);
   assert.equal(fighter.air.mode, 'reeling');
@@ -137,5 +137,5 @@ test('a low silk anchor cannot snap a spider onto a higher rail during the final
   }
   assert.ok(isAttached(fighter));
   assert.equal(fighter.air.y, 0);
-  assert.ok(fighter.x <= -0.75);
+  assert.ok(fighter.x <= 2.5);
 });

@@ -316,6 +316,7 @@ export function createHeldStick(scene, stage = 'single') {
   leftHolder.name = 'Left holder';
   leftHolder.scale.x = -1;
   root.add(leftHolder);
+  const middleHolders = [];
   root.setStage = (value) => {
     const layout = getStage(value);
     drawTwigs(layout);
@@ -324,6 +325,19 @@ export function createHeldStick(scene, stage = 'single') {
     leftHolder.visible = layout.sticks.length > 1;
     leftHolder.position.x = layout.sticks[0].body[0] + 0.6 + 6.5;
     leftHolder.position.y = layout.sticks[0].y;
+    const innerSticks = layout.sticks.slice(1, -1);
+    while (middleHolders.length < innerSticks.length) {
+      const support = holder.clone(true);
+      support.name = `Middle holder ${middleHolders.length + 1}`;
+      root.add(support);
+      middleHolders.push(support);
+    }
+    middleHolders.forEach((support, index) => {
+      const stick = innerSticks[index];
+      support.visible = !!stick;
+      if (!stick) return;
+      support.position.set(STICK.holderOffset + stick.body[1] - STICK.rightEnd, stick.y, 0);
+    });
     root.userData.stage = layout.id;
   };
   root.setStage(stage);

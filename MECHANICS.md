@@ -29,7 +29,7 @@ the human player's controls.
 
 ## Arenas, camera, and opponent
 
-The starting arena has one twig; the wider arena has two horizontal twigs with a gap. Stepped sticks places the rails at -0.9 and +0.9; Terraces adds a 1.25-unit height difference from the base height. Attached height is measured in the shared arena frame; silk targets a twig above the outlet and the grip finishes at that twig height. Twig geometry, available space, contact, and return rules share the stage definition in `src/stage.js`. The follow camera frames the fighters and their aerial movement; `src/camera.js` contains framing rules.
+The starting arena has one twig; the wider arena has two horizontal twigs with a gap. Stepped sticks places two rails at -0.9 and +0.9 for an uphill/downhill crossing. Terraces instead has three sticks: two raised starting perches at +1.25 and a lower center fighting stick at 0. Each gap is reachable with silk, but crossing between the outer perches requires an intermediate landing on the center stick. The center has its own holder. Attached height is measured in the shared arena frame; silk targets a twig above the outlet and the grip finishes at that twig height. Twig geometry, available space, contact, and return rules share the stage definition in `src/stage.js`. The follow camera frames the fighters and their aerial movement; `src/camera.js` contains framing rules.
 
 The bot observes world state rather than player input. It uses seeded decision timing for repeatability, responds to exposed attack phases, and uses aerial controls to return after a drop or knock-off. The exact delays and tactical choices are defined in `src/ai.js`.
 

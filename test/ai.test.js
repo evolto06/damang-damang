@@ -12,11 +12,20 @@ function inRange(world) {
 
 test('AI waits one second initially on both layouts and reset restores that grace period', () => {
   for (const stage of ['single', 'twin']) {
-    const world = stage === 'single' ? inRange(createWorld()) : createWorld(stage), ai = createAI();
-    for (world.tick = 0; world.tick < AI_RULES.initialWait; world.tick++) assert.deepEqual(decideAI(ai, world), neutral);
+    const world = stage === 'single' ? inRange(createWorld()) : createWorld(stage),
+      ai = createAI();
+    for (world.tick = 0; world.tick < AI_RULES.initialWait; world.tick++)
+      assert.deepEqual(decideAI(ai, world), neutral);
     const action = decideAI(ai, world);
     assert.equal(stage === 'single' ? action.bite : action.direction === -1, true);
-    assert.deepEqual(createAI(), { state: 'opening_wait', readyAt: 60, seed: 0x6d2b79f5, retreatUntil: 0, lastHitAttack: 0, seenWindup: -1 });
+    assert.deepEqual(createAI(), {
+      state: 'opening_wait',
+      readyAt: 60,
+      seed: 0x6d2b79f5,
+      retreatUntil: 0,
+      lastHitAttack: 0,
+      seenWindup: -1,
+    });
   }
 });
 
@@ -59,7 +68,9 @@ test('AI samples a bounded seeded decision delay after recovery or interruption'
     world.tick++;
     assert.deepEqual(decideAI(ai, world), neutral);
     const readyAt = ai.readyAt;
-    assert.ok(readyAt - world.tick >= AI_RULES.minDelay && readyAt - world.tick <= AI_RULES.maxDelay);
+    assert.ok(
+      readyAt - world.tick >= AI_RULES.minDelay && readyAt - world.tick <= AI_RULES.maxDelay,
+    );
     for (; world.tick < readyAt; world.tick++) assert.deepEqual(decideAI(ai, world), neutral);
     assert.equal(decideAI(ai, world).bite, true);
   }
@@ -96,7 +107,10 @@ test('a player reacting to visible windup can evade and punish a full AI round',
       if (opponent.phase === 'windup' && opponent.phaseTicks === 1) observedWindups++;
     } else if (['recovery', 'hitstun'].includes(opponent.phase)) {
       const gap = opponent.x - player.x - RULES.separation;
-      action = { direction: gap > COMBAT.reach / 2 ? 1 : 0, bite: player.phase === 'idle' && gap <= COMBAT.reach / 2 };
+      action = {
+        direction: gap > COMBAT.reach / 2 ? 1 : 0,
+        bite: player.phase === 'idle' && gap <= COMBAT.reach / 2,
+      };
     }
     stepWorld(world, [action, world.hitstop ? neutral : decideAI(ai, world)]);
   }
@@ -105,11 +119,11 @@ test('a player reacting to visible windup can evade and punish a full AI round',
   assert.equal(world.fighters[0].hp, COMBAT.maxHealth);
 });
 
-
 test('detached combat holds, bot retrieval casts when needed, and return restarts full grace', () => {
   for (const index of [0, 1]) {
     for (const mode of ['falling', 'grounded', 'deploying', 'swinging', 'reeling', 'reattaching']) {
-      const world = inRange(createWorld()), ai = createAI();
+      const world = inRange(createWorld()),
+        ai = createAI();
       world.tick = 120;
       world.fighters[index].air.mode = mode;
       const detachedAction = index === 1 ? { ...neutral, web: mode === 'grounded' } : neutral;
@@ -134,7 +148,8 @@ test('detached combat holds, bot retrieval casts when needed, and return restart
 });
 
 test('another aerial interruption restarts grace before movement as well as bites', () => {
-  const world = createWorld(), ai = createAI();
+  const world = createWorld(),
+    ai = createAI();
   world.tick = 120;
   world.fighters[0].air.mode = 'falling';
   decideAI(ai, world);
@@ -155,10 +170,16 @@ test('deterministic geometry threshold ignores private inputs and never changes 
   for (const offset of [-1e-8, 1e-8]) {
     const world = createWorld();
     world.tick = AI_RULES.initialWait;
-    world.fighters[1].x = world.fighters[0].x + RULES.separation + COMBAT.reach - AI_RULES.rangeMargin + offset;
+    world.fighters[1].x =
+      world.fighters[0].x + RULES.separation + COMBAT.reach - AI_RULES.rangeMargin + offset;
     const before = structuredClone(world);
-    Object.defineProperty(world, 'inputs', { get() { throw new Error('AI inspected player inputs'); } });
-    const first = createAI(), second = createAI();
+    Object.defineProperty(world, 'inputs', {
+      get() {
+        throw new Error('AI inspected player inputs');
+      },
+    });
+    const first = createAI(),
+      second = createAI();
     const action = decideAI(first, world);
     assert.deepEqual(action, decideAI(second, world));
     assert.deepEqual(first, second);
@@ -167,31 +188,40 @@ test('deterministic geometry threshold ignores private inputs and never changes 
   }
 });
 
-
 test('seeded reaction delays vary reproducibly and a successful bite schedules retreat once', () => {
-  const delays = [1, 12345, 0x6d2b79f5, 0xffffffff].map(seed => {
-    const world = inRange(createWorld()), ai = createAI(seed), copy = createAI(seed);
-    world.tick = 120; world.fighters[1].phase = 'recovery';
-    decideAI(ai, world); decideAI(copy, world);
-    world.tick++; world.fighters[1].phase = 'idle';
+  const delays = [1, 12345, 0x6d2b79f5, 0xffffffff].map((seed) => {
+    const world = inRange(createWorld()),
+      ai = createAI(seed),
+      copy = createAI(seed);
+    world.tick = 120;
+    world.fighters[1].phase = 'recovery';
+    decideAI(ai, world);
+    decideAI(copy, world);
+    world.tick++;
+    world.fighters[1].phase = 'idle';
     assert.deepEqual(decideAI(ai, world), decideAI(copy, world));
     assert.deepEqual(ai, copy);
     return ai.readyAt - world.tick;
   });
   assert.ok(new Set(delays).size > 1);
-  assert.ok(delays.every(value => value >= AI_RULES.minDelay && value <= AI_RULES.maxDelay));
-  const world = inRange(createWorld()), ai = createAI(); world.tick = 120;
+  assert.ok(delays.every((value) => value >= AI_RULES.minDelay && value <= AI_RULES.maxDelay));
+  const world = inRange(createWorld()),
+    ai = createAI();
+  world.tick = 120;
   Object.assign(world.fighters[1], { attackHit: true, attackId: 1 });
   assert.equal(decideAI(ai, world).direction, 1);
   const until = ai.retreatUntil;
-  for (world.tick++; world.tick < until; world.tick++) assert.equal(decideAI(ai, world).direction, 1);
+  for (world.tick++; world.tick < until; world.tick++)
+    assert.equal(decideAI(ai, world).direction, 1);
   assert.equal(ai.retreatUntil, until, 'one attack cannot continually renew retreat');
 });
 
-
 test('return grace still applies if the bot retrieves onto its original twin rail', () => {
-  const world = createWorld('twin'), ai = createAI(); world.tick = 120;
-  world.fighters[1].air.mode = 'falling'; decideAI(ai, world);
+  const world = createWorld('twin'),
+    ai = createAI();
+  world.tick = 120;
+  world.fighters[1].air.mode = 'falling';
+  decideAI(ai, world);
   world.fighters[1].air.mode = 'attached';
   for (; world.tick < 150; world.tick++) assert.deepEqual(decideAI(ai, world), neutral);
   assert.equal(decideAI(ai, world).direction, -1);

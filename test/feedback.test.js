@@ -4,7 +4,11 @@ import { createRuntime, setReady } from '../src/runtime.js';
 import { fightFeedback } from '../src/feedback.js';
 import { stepWorld } from '../src/combat.js';
 
-const ready = () => { const runtime = createRuntime(); setReady(runtime, true); return runtime; };
+const ready = () => {
+  const runtime = createRuntime();
+  setReady(runtime, true);
+  return runtime;
+};
 
 test('opponent return explains and gates the same actions as combat, retaining legal drop', () => {
   const runtime = ready();
@@ -25,7 +29,8 @@ test('opponent return explains and gates the same actions as combat, retaining l
 });
 
 test('recovery guidance distinguishes manual C return, automatic retrieval and grip', () => {
-  const runtime = ready(), player = runtime.world.fighters[0];
+  const runtime = ready(),
+    player = runtime.world.fighters[0];
   for (const mode of ['falling', 'grounded']) {
     player.air.mode = mode;
     const feedback = fightFeedback(runtime);
@@ -54,15 +59,19 @@ test('loading, pause and round result take precedence over aerial and attack gui
   const feedback = fightFeedback(runtime);
   assert.match(feedback.prompt, /Round over/);
   assert.deepEqual(feedback.phases, ['Round over', 'Round over']);
-  assert.ok(Object.values(feedback.actions).every(action => action.disabled));
+  assert.ok(Object.values(feedback.actions).every((action) => action.disabled));
 });
 
 test('bite recovery and cooldown explain independent action availability', () => {
-  const runtime = ready(), player = runtime.world.fighters[0];
+  const runtime = ready(),
+    player = runtime.world.fighters[0];
   player.phase = 'recovery';
   assert.match(fightFeedback(runtime).prompt, /Bite recovery/);
-  assert.ok(['bite', 'dash', 'drop'].every(kind => fightFeedback(runtime).actions[kind].disabled));
-  player.phase = 'idle'; player.cooldown = 0.001;
+  assert.ok(
+    ['bite', 'dash', 'drop'].every((kind) => fightFeedback(runtime).actions[kind].disabled),
+  );
+  player.phase = 'idle';
+  player.cooldown = 0.001;
   const feedback = fightFeedback(runtime);
   assert.equal(feedback.actions.bite.disabled, false);
   assert.equal(feedback.actions.drop.disabled, false);

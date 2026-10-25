@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 import { createWorld, stepWorld } from '../src/combat.js';
 import { RULES } from '../src/movement.js';
 
-const tick = (world, count, actions) => { for (let i = 0; i < count; i++) stepWorld(world, actions); };
+const tick = (world, count, actions) => {
+  for (let i = 0; i < count; i++) stepWorld(world, actions);
+};
 function legal(world) {
   const [left, right] = world.fighters;
   assert.ok(left.x >= -RULES.limit && right.x <= RULES.limit);
@@ -21,7 +23,10 @@ test('both fighters accelerate and brake, with mirrored movement', () => {
 test('simultaneous inward movement and opposing dashes remain symmetric without crossing', () => {
   const world = createWorld();
   for (let i = 0; i < 5000; i++) {
-    stepWorld(world, [{ direction: 1, dash: i % 60 === 0 }, { direction: -1, dash: i % 60 === 0 }]);
+    stepWorld(world, [
+      { direction: 1, dash: i % 60 === 0 },
+      { direction: -1, dash: i % 60 === 0 },
+    ]);
     legal(world);
     assert.ok(Math.abs(world.fighters[0].x + world.fighters[1].x) < 1e-8);
   }

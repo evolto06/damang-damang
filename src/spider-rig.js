@@ -6,6 +6,7 @@ import { WEB, webPose } from './web-attack.js';
 import { AIR } from './aerial.js';
 import { RULES } from './movement.js';
 import { hangingPose } from './hanging-pose.js';
+
 import { idlePose } from './idle-pose.js';
 
 export const PLAYER_TINTS = Object.freeze(['#efc26f', '#a7d9d5']);
@@ -13,6 +14,7 @@ export const PLAYER_TINTS = Object.freeze(['#efc26f', '#a7d9d5']);
 export const ATTACHMENT = Object.freeze({
   scale: BITE.scale,
   offsetY: BITE.offsetY,
+  legReach: 1.25,
   stride: 0.34,
   stance: 0.72,
   tolerance: 0.02,
@@ -30,7 +32,11 @@ export function footCycle(x, legIndex, side) {
     (stance
       ? ATTACHMENT.stance / 2 - fraction
       : -ATTACHMENT.stance / 2 + ATTACHMENT.stance * smooth);
-  return { stance, relativeX, lift: stance ? 0 : Math.sin(t * Math.PI) * 0.065 };
+  return {
+    stance,
+    relativeX,
+    lift: stance ? 0 : Math.sin(t * Math.PI) * 0.065,
+  };
 }
 // A projected ring center, not a bounding-box corner, defines each segment end.
 function segmentAxis(geometry) {
@@ -181,7 +187,11 @@ export function createSpiderRig(source, index) {
       const measure = segmentAxis(part.geometry);
       // Point the measured axis distally using the next joint, or the source hip.
       if (measure.axis.dot(measure.center.clone().sub(hip)) < 0) measure.axis.negate();
-      const segment = { ...measure, start: cursor, count: part.geometry.attributes.position.count };
+      const segment = {
+        ...measure,
+        start: cursor,
+        count: part.geometry.attributes.position.count,
+      };
       cursor += segment.count;
       return segment;
     });
@@ -257,7 +267,10 @@ function updateSpiderRig(rig, x, fighter) {
             : '#000000',
   );
   rig.material.emissiveIntensity = phase === 'active' ? 0.65 : phase === 'hitstun' ? 0.8 : 0.35;
-  const pose = fighter?.pose ?? { ...bitePose(phase, ticks), ...webPose(phase, ticks) };
+  const pose = fighter?.pose ?? {
+    ...bitePose(phase, ticks),
+    ...webPose(phase, ticks),
+  };
   const webStand = pose.webStand ?? 0,
     webCurl = pose.webCurl ?? 0;
   const idle = idlePose(fighter);
@@ -287,7 +300,7 @@ function updateSpiderRig(rig, x, fighter) {
   rig.root.position.set(x, air?.y ?? 0, 0);
   // Rotate about the actual source spinneret cap, keeping the physics outlet
   // and visible silk exactly coincident through the whole sway.
-  rig.inverted.rotation.set(hang.pitch, 0, Math.PI);
+  rig.inverted.rotation.set(hang.pitch, 0, Math.PI * (1 - hang.upright));
   const outlet = new THREE.Vector3(...AIR.outlet).multiplyScalar(ATTACHMENT.scale);
   const neutralOutlet = outlet.clone().applyAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI);
   rig.inverted.position.copy(neutralOutlet).sub(outlet.applyQuaternion(rig.inverted.quaternion));
@@ -335,7 +348,9 @@ function updateSpiderRig(rig, x, fighter) {
     const toe = new THREE.Vector3(
       (leg.side * contactSide) / scale,
       -(contactY - ATTACHMENT.offsetY) / scale,
-      leg.hip.z + [0.7, 0.35, -0.4, -0.9][leg.number] + (rig.forward * cycle.relativeX) / scale,
+      leg.hip.z +
+        ATTACHMENT.legReach * [0.7, 0.35, -0.4, -0.9][leg.number] +
+        (rig.forward * cycle.relativeX) / scale,
     );
     const h = leg.hip.clone();
     h.y += WEB.rise * webStand + idle.lift;
@@ -351,8 +366,7 @@ function updateSpiderRig(rig, x, fighter) {
       new THREE.Vector3(s * 0.43, toe.y - 0.08, z),
       toe,
     ];
-    // Flex the proximal joints with the body, keeping every distal grip fixed.
-    points[1].y -= idle.lift / 7; // this joint already inherits the lifted hip
+    points[1].y -= idle.lift / 7;
     for (let joint = 2; joint < 7; joint++) points[joint].y += idle.lift * (1 - joint / 7);
     if (webStand > 0) {
       points[2].y += 0.8 * webStand;
@@ -432,6 +446,12 @@ function updateSpiderRig(rig, x, fighter) {
         points[joint].lerp(folded[joint], airBlend);
       }
     }
+    // Longer intermediate links open the silhouette while planted toe targets,
+    // jaws, head and body keep their calibrated combat contact geometry.
+    for (let joint = 2; joint < 7; joint++) {
+      points[joint].x = h.x + (points[joint].x - h.x) * ATTACHMENT.legReach;
+      points[joint].z = h.z + (points[joint].z - h.z) * ATTACHMENT.legReach;
+    }
     const positions = leg.mesh.geometry.attributes.position,
       normals = leg.mesh.geometry.attributes.normal;
     for (let j = 0; j < 7; j++) {
@@ -480,7 +500,7 @@ function updateSpiderRig(rig, x, fighter) {
   }
 }
 export function inspectRig(rig) {
-  rig.root.updateMatrixWorld(true);
+  rig.root.updateWorldMatrix(true, true);
   const feet = rig.legs.map((leg) => {
     const segment = leg.segments[6],
       positions = leg.mesh.geometry.attributes.position;
@@ -514,6 +534,9 @@ export function inspectRig(rig) {
     forward: rig.forward,
     feet,
     maxStanceError: Math.max(0, ...feet.filter((f) => f.stance).map((f) => f.radialError)),
-    bodyBounds: { min: bodyBounds.min.toArray(), max: bodyBounds.max.toArray() },
+    bodyBounds: {
+      min: bodyBounds.min.toArray(),
+      max: bodyBounds.max.toArray(),
+    },
   };
 }

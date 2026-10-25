@@ -72,13 +72,13 @@ export function resolveContact(fighters, previous, stage = fighters[0].stage) {
     rightIndex = 1 - leftIndex;
   const left = fighters[leftIndex],
     right = fighters[rightIndex];
-  left.x = clampToStick(left.x, { x: previous[leftIndex], air: left.air }, stage);
-  right.x = clampToStick(right.x, { x: previous[rightIndex], air: right.air }, stage);
-  const [leftMin] = stickAt(left, stage),
-    [, rightMax] = stickAt(right, stage);
+  left.x = clampToStick(left.x, previous[leftIndex], stage);
+  right.x = clampToStick(right.x, previous[rightIndex], stage);
+  const [leftMin] = stickAt(left.x, stage),
+    [, rightMax] = stickAt(right.x, stage);
   if (!sameStick(left, right, stage)) {
     for (const fighter of fighters) {
-      const [low, high] = stickAt(fighter, stage);
+      const [low, high] = stickAt(fighter.x, stage);
       if ((fighter.x <= low && fighter.velocity < 0) || (fighter.x >= high && fighter.velocity > 0))
         fighter.velocity = 0;
     }

@@ -29,6 +29,15 @@ export const STAGES = Object.freeze({
       { walk: [0.75, 13.5], body: [0.6, 15], y: 0 },
     ],
   }),
+  terraces: freezeStage({
+    id: 'terraces',
+    name: 'Terraces',
+    start: [-6.75, 6.75],
+    sticks: [
+      { walk: [-13.5, -0.75], body: [-15, -0.6], y: 0 },
+      { walk: [0.75, 13.5], body: [0.6, 15], y: 1.25 },
+    ],
+  }),
   heights: freezeStage({
     id: 'heights',
     name: 'Stepped sticks',
@@ -82,3 +91,6 @@ export const span = (layout) => {
     Math.max(...sticks.map((stick) => stick.walk[1])),
   ];
 };
+
+export const stickHeight = (x, layout) => stickFor(x, layout).y;
+export const silkTarget = (x, y, layout) => twigAbove(x, y + 0.049, layout);

@@ -6,16 +6,15 @@ import {
   span,
   twigAt,
   sameStick,
-  stickFor,
-  twigAbove,
-  getStage,
+  stickHeight,
+  silkTarget,
 } from './stage.js';
 
 const STICK_LIFT = 1.3;
 export const AIR = Object.freeze({
   gravity: 8,
   terminalSpeed: 6.5,
-  groundY: -3.3347 - STICK_LIFT,
+  groundY: -3.4396 - STICK_LIFT,
   stickY: 1.4 + STICK_LIFT,
   stickRadius: 0.075,
   leftRadius: 0.066,
@@ -50,7 +49,7 @@ export const stickRadiusAtX = (x, stage) => {
     AIR.leftRadius + (AIR.stickRadius - AIR.leftRadius) * clamp((x - left) / (right - left), 0, 1)
   );
 };
-export function stickSurfaceY(x, z, stage) {
+export function stickSurfaceY(x, z, stage, height = stickHeight(x, stage)) {
   const radius = stickRadiusAtX(x, stage);
   let bottom = Infinity;
   for (let side = 0; side < 10; side++) {
@@ -63,14 +62,15 @@ export function stickSurfaceY(x, z, stage) {
       bottom = Math.min(bottom, Math.sin(a) * radius + (Math.sin(b) - Math.sin(a)) * radius * t);
     }
   }
-  return bottom;
+  return bottom + height;
 }
 export const isAttached = (fighter) => !fighter.air || fighter.air.mode === 'attached';
 export const createAir = (y = 0) => ({
   mode: 'attached',
   y,
+  releaseY: y,
   targetY: y,
-  anchorStick: -1,
+  groundTicks: 0,
   vx: 0,
   vy: 0,
   ticks: 0,
@@ -112,14 +112,16 @@ export function releaseStick(fighter) {
     offset = outletOffset(fighter);
   air.mode = 'falling';
   air.ticks = 0;
+  air.animationTicks = 0;
+  air.releaseY = air.y;
   air.targetY = air.y;
+  air.groundTicks = 0;
   air.vx = fighter.velocity;
   air.vy = -0.12;
   air.landingX = fighter.x;
   air.anchorX = clampToTwig(fighter.x + offset[0], fighter.x, fighter.stage);
   air.anchorZ = offset[2];
-  air.anchorY = air.targetY + stickSurfaceY(air.anchorX, air.anchorZ, fighter.stage);
-  air.anchorStick = getStage(fighter.stage).sticks.indexOf(stickFor(fighter, fighter.stage));
+  air.anchorY = stickSurfaceY(air.anchorX, air.anchorZ, fighter.stage, air.targetY);
   air.reelRamp = 1;
   fighter.velocity = 0;
   fighter.dashRemaining = 0;
@@ -135,20 +137,8 @@ export function landingSeparation(fighter, other) {
   );
 }
 const ceiling = (other) => (other.air?.y ?? 0) - AIR.clearance;
-const targetStick = (fighter) =>
-  getStage(fighter.stage).sticks[fighter.air.anchorStick] ?? stickFor(fighter, fighter.stage);
-// A level swing may land on the next rail while silk remains tied to the first.
-// Collision follows the rail under the projected grip, not the silk attachment.
-const landingStick = (fighter) => {
-  if (isAttached(fighter)) return stickFor(fighter, fighter.stage);
-  const sticks = getStage(fighter.stage).sticks.filter(
-    (stick) => Math.abs(stick.y - fighter.air.targetY) < 1e-9,
-  );
-  return sticks.length ? stickFor(fighter.x, { sticks }) : targetStick(fighter);
-};
-const sharesTarget = (fighter, other) => landingStick(fighter) === landingStick(other);
 const underOpponent = (fighter, other) =>
-  sharesTarget(fighter, other) &&
+  sameStick(fighter.x, other.x, fighter.stage) &&
   Math.abs(fighter.x - other.x) < landingSeparation(fighter, other) - 1e-9;
 export function legalBounds(fighter, other, index) {
   const [spanLow, spanHigh] = span(fighter.stage);
@@ -157,9 +147,8 @@ export function legalBounds(fighter, other, index) {
   // A released spider may change horizontal order only below the complete
   // opponent silhouette. Against its underside, retain sideways steering.
   if (
-    sharesTarget(fighter, other) &&
-    (fighter.air.y > ceiling(other) + 1e-9 ||
-      (fighter.air.y >= ceiling(other) - 1e-9 && !underOpponent(fighter, other)))
+    fighter.air.y > ceiling(other) + 1e-9 ||
+    (fighter.air.y >= ceiling(other) - 1e-9 && !underOpponent(fighter, other))
   ) {
     const separation = landingSeparation(fighter, other);
     if (fighter.x < other.x) high = Math.min(high, other.x - separation);
@@ -192,7 +181,8 @@ function advanceReeling(fighter, other, index, offset, direction) {
     startY = air.y;
   for (let step = 0; step < SUBSTEPS; step++) {
     const angle = Math.atan2(fighter.x - centerX, centerY - air.y);
-    air.vx += direction * AIR.reelSteer * Math.cos(angle) * dt;
+    // Keep steering effective when the rope is nearly horizontal at a raised rail.
+    air.vx += direction * AIR.reelSteer * Math.max(0.35, Math.cos(angle)) * dt;
     air.vx = clamp(air.vx * Math.exp(-AIR.swingDrag * dt), -AIR.maxSwingSpeed, AIR.maxSwingSpeed);
     const x = fighter.x + air.vx * dt;
     fighter.x = legalX(fighter, other, index, x);
@@ -263,31 +253,35 @@ export function advanceAerial(fighter, other, index, action) {
   const air = fighter.air;
   if (isAttached(fighter)) return false;
   air.blocked = false;
+  air.blockReason = null;
   air.clearDirection = 0;
   fighter.velocity = 0;
   fighter.dashRemaining = 0;
   fighter.cooldown = Math.max(0, fighter.cooldown - DT);
   const offset = outletOffset(fighter);
   const direction = Number.isFinite(action.direction) ? Math.sign(action.direction) : 0;
-  const castTarget = twigAbove(fighter.x + offset[0], air.y, fighter.stage);
-  if (action.web && castTarget && ['falling', 'grounded'].includes(air.mode)) {
+  if (action.web && ['falling', 'grounded'].includes(air.mode)) {
+    const target = silkTarget(fighter.x + offset[0], air.y + offset[1], fighter.stage);
+    if (!target) return true;
     air.mode = 'deploying';
     air.ticks = 0;
     // Silk is fired from the spinneret at the moment of the cast, so the anchor
     // sits above the current position rather than the earlier drop point. A
     // moving spider otherwise attaches to a rope angled behind it, which turns
     // most of its forward speed into radial tension and kills the swing.
-    air.anchorStick = getStage(fighter.stage).sticks.indexOf(castTarget);
-    air.targetY = castTarget.y;
-    air.anchorX = clamp(fighter.x + offset[0], ...castTarget.body);
+    air.anchorX = clamp(fighter.x + offset[0], ...target.body);
+    air.targetY = target.y;
     air.anchorZ = offset[2];
-    air.anchorY = air.targetY + stickSurfaceY(air.anchorX, air.anchorZ, { sticks: [castTarget] });
+    air.anchorY = stickSurfaceY(air.anchorX, air.anchorZ, fighter.stage, air.targetY);
     air.landingX = fighter.x;
   }
   if (air.mode === 'deploying') {
-    const twig = targetStick(fighter);
-    air.anchorX = clamp(fighter.x + offset[0], ...twig.body);
-    air.anchorY = air.targetY + stickSurfaceY(air.anchorX, air.anchorZ, { sticks: [twig] });
+    const target = silkTarget(fighter.x + offset[0], air.y + offset[1], fighter.stage);
+    if (target) {
+      air.anchorX = clamp(fighter.x + offset[0], ...target.body);
+      air.targetY = target.y;
+    }
+    air.anchorY = stickSurfaceY(air.anchorX, air.anchorZ, fighter.stage, air.targetY);
   }
   if (air.mode === 'grounded') return true;
   air.ticks++;
@@ -337,7 +331,7 @@ export function advanceAerial(fighter, other, index, action) {
     const x = fighter.x + air.vx * DT;
     fighter.x = legalX(fighter, other, index, x);
     if (fighter.x !== x) air.vx = 0;
-    air.y = Math.max(AIR.groundY, Math.min(air.targetY - 0.001, air.y + air.vy * DT));
+    air.y = Math.max(AIR.groundY, Math.min(air.releaseY - 0.001, air.y + air.vy * DT));
     if (air.y === AIR.groundY) {
       air.vy = 0;
       if (air.mode === 'falling') {
@@ -362,6 +356,14 @@ export function advanceAerial(fighter, other, index, action) {
       air.reelRamp = smoothInverse(clamp(Math.max(0, air.vy) / AIR.reelSpeed, 0, 1));
     }
   } else if (air.mode === 'reeling' && air.y >= air.targetY - 0.28) {
+    if (stickHeight(fighter.x, fighter.stage) !== air.targetY) {
+      // A low anchor cannot hoist a spider onto a higher twig. Keep steering
+      // available instead of interpolating a long jump back across the gap.
+      air.blocked = true;
+      air.blockReason = 'height';
+      air.clearDirection = Math.sign(air.anchorX - fighter.x);
+      return true;
+    }
     air.mode = 'reattaching';
     air.ticks = 0;
     air.startX = fighter.x;
@@ -370,18 +372,15 @@ export function advanceAerial(fighter, other, index, action) {
     // Finish the grip where the swing and steering actually left the spider,
     // letting a little lateral momentum glide out, instead of dragging it back
     // to the cast point during the last 18 ticks.
-    const proposed = legalX(fighter, other, index, fighter.x + air.vx * AIR.reattachTicks * DT);
-    const eligible = getStage(fighter.stage).sticks.filter(
-      (stick) => Math.abs(stick.y - air.targetY) < 1e-9,
+    air.landingX = clampToStick(
+      legalX(fighter, other, index, fighter.x + air.vx * AIR.reattachTicks * DT),
+      fighter.x,
+      fighter.stage,
     );
-    const landing = eligible.reduce((best, stick) =>
-      Math.abs(proposed - clamp(proposed, ...stick.walk)) <
-      Math.abs(proposed - clamp(proposed, ...best.walk))
-        ? stick
-        : best,
-    );
-    air.anchorStick = getStage(fighter.stage).sticks.indexOf(landing);
-    air.landingX = clamp(proposed, ...landing.walk);
+    // A late drift can end over another rail. Keep the grip on the rail whose
+    // silk supports us; crossing to another height requires a fresh cast.
+    if (stickHeight(air.landingX, fighter.stage) !== air.targetY)
+      air.landingX = clampToStick(fighter.x, fighter.x, fighter.stage);
   }
   if (air.blocked) {
     const [low, high] = legalBounds(fighter, other, index);

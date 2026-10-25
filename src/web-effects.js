@@ -27,7 +27,10 @@ function net(material) {
   return new THREE.LineSegments(geometry, material);
 }
 export function createWebEffects(parent) {
-  const material = new THREE.LineBasicMaterial({ color: '#efffff', depthWrite: false });
+  const material = new THREE.LineBasicMaterial({
+    color: '#efffff',
+    depthWrite: false,
+  });
   const bolts = [],
     wraps = [0, 1].map(() => {
       const mesh = net(material);

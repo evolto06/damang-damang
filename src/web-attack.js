@@ -78,7 +78,13 @@ export function launchWeb(fighter, target, source) {
 // Sweep the finite bolt against a moving head volume inside the supplied
 // prosoma silhouette. Relative motion prevents tunnelling during a lunge.
 export function webContact(shot, target, previousTarget) {
-  if (!isAttached(target) || target.hp <= 0 || target.phase === 'ko') return null;
+  if (
+    !isAttached(target) ||
+    target.hp <= 0 ||
+    target.phase === 'ko' ||
+    target.phase === 'lungeactive'
+  )
+    return null;
   const startCenter = headCenter(previousTarget),
     endCenter = headCenter(target);
   const radius = [
@@ -100,7 +106,10 @@ export function webContact(shot, target, previousTarget) {
     t = (-b - Math.sqrt(discriminant)) / (2 * a);
   }
   return t >= 0 && t <= 1
-    ? { t, point: shot.previous.map((value, axis) => value + (shot.position[axis] - value) * t) }
+    ? {
+        t,
+        point: shot.previous.map((value, axis) => value + (shot.position[axis] - value) * t),
+      }
     : null;
 }
 export function advanceWebs(world, previous) {
@@ -118,7 +127,12 @@ export function advanceWebs(world, previous) {
     shot.travelled += speed * fraction;
     const contact = webContact(shot, target, previous[1 - shot.source]);
     if (contact)
-      hits.push({ type: 'webhit', source: shot.source, target: 1 - shot.source, contact });
+      hits.push({
+        type: 'webhit',
+        source: shot.source,
+        target: 1 - shot.source,
+        contact,
+      });
     else if (shot.age < WEB.lifetime && shot.travelled < WEB.range) remaining.push(shot);
   }
   world.projectiles = remaining;

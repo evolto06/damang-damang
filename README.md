@@ -17,7 +17,7 @@ Open the URL printed by Vite. Choose **Bot Match** or local **PvP** after loadin
 
 | Action | Bot Match | PvP P1 | PvP P2 | Standard controller |
 | --- | --- | --- | --- | --- |
-| Move | A / D or ← / → | A / D | ← / → | D-pad ← / → |
+| Move | A / D or ← / → | A / D | ← / → | D-pad or left stick ← / → |
 | Bite | J | Q | , | Left face (Xbox X) |
 | Shoot web | K | E | . | Top face (Xbox Y) |
 | Lunge | Shift / Space | F | / | Bottom face (Xbox A) |
@@ -28,7 +28,7 @@ Open the URL printed by Vite. Choose **Bot Match** or local **PvP** after loadin
 
 Touch buttons control P1; enable Two-player touch for separate P1/P2 controls in landscape. Keyboard and controllers remain available alongside touch. Controller bindings follow physical button positions; printed PlayStation and Switch labels differ. Press and release a controller button to connect it. The first recognized controller takes P1 and the next takes P2. Release held controller buttons after starting, resuming, or restarting before playing.
 
-Move close enough to bite, or shoot a web to briefly stun the opponent. Drop or retreat to evade; while falling or grounded, cast silk and steer to swing back. Choose one stick, twin sticks, or stepped sticks at different heights. Matches are first to two round wins; draws award no point and replay. A round ends at zero health or after 60 seconds; higher health wins at timeout. Staying on the pavement causes damage after a grace period, so cast silk to recover. The pause dialog contains complete controls, a button-hint switch, sound mute, and a way to change mode or arena. Sounds are synthesized in the browser after your first interaction. Optional coaching teaches movement, web shots, and bites, and can be skipped. Controller D-pad navigates menus, left/right adjusts choices, bottom face confirms, and right face goes back.
+Move close enough to bite, or shoot a web to briefly stun the opponent. Drop or retreat to evade; while falling or grounded, cast silk and steer to swing back. Choose one stick, twin sticks, Terraces (0 and +1.25), or the retained Stepped sticks (-0.9 and +0.9). Matches are first to two round wins; draws award no point and replay. A round ends at zero health or after 60 seconds; higher health wins at timeout. Landing deals 10 damage, then each grounded second deals 5 more. Lunges have an 8-tick windup, a 9-tick moving 30-damage strike that evades webs, and 24 ticks of recovery. Cast silk to recover. The pause dialog contains complete controls, a button-hint switch, sound mute, and a way to change mode or arena. Sounds are synthesized in the browser after your first interaction. Optional coaching teaches movement, web shots, and bites, and can be skipped. Controller D-pad navigates menus, left/right adjusts choices, bottom face confirms, and right face goes back.
 
 ## Build and checks
 
@@ -41,12 +41,12 @@ npm run preview
 
 The build is written to `dist/`. Relative URLs support deployment beneath a subfolder. The deployment check serves the production build under `/damang-damang/` and checks HTML, JavaScript, CSS, and the GLB model over HTTP; it does not render the game.
 
-CI checks formatting, unit tests, production builds, nested asset serving, and Chromium smoke tests for root and nested URLs. Run `npm run test:smoke` after building on a machine with Playwright Chromium installed. The browser suite has been prepared but has not been executed locally here. Only a successful run on `main` can upload and deploy to GitHub Pages. Repository administrators must select **GitHub Actions** as the Pages source; that setting and a live deployment have not been verified here. No published play link or gameplay capture is claimed.
+CI checks formatting, unit tests, production builds, nested asset serving, and Chromium checks across four viewports, virtual controllers, touch controls, loading failures, and root/nested production URLs. Run `npm run test:smoke` after building on a machine with Playwright Chromium installed. The browser suite has been prepared but has not been executed locally here. Only a successful run on `main` can upload and deploy to GitHub Pages. Repository administrators must select **GitHub Actions** as the Pages source; that setting and a live deployment have not been verified here. No published play link is claimed. The imported [gameplay screenshot](docs/gameplay.png) is a PR #17 reference capture, not a capture of this integrated build.
 
-See [MECHANICS.md](MECHANICS.md) for simulation rules and source pointers.
+See [MECHANICS.md](MECHANICS.md) for simulation rules, [ISSUE-STATUS.md](ISSUE-STATUS.md) for review coverage, [QA.md](QA.md) for hands-on checks, and [SUBMISSION.md](SUBMISSION.md) for the submission checklist and draft disclosures.
 
 ## Assets and credits
 
 The low-poly spider was created procedurally in Blender for this project. Its editable source is `assets/source/spider_anatomy_lowpoly.blend`; `scripts/export_spider.py` prepares the browser model at `public/models/spider.glb` without saving over the source. The street, twig, holder, and props are procedural scene geometry.
 
-The bite pose takes motion reference from [Vibi's “Spider Attack Animation1”](https://www.youtube.com/watch?v=vBbR2uFKEls). No video artwork is bundled. Rendering uses [Three.js](https://threejs.org/) and its GLTFLoader; dependency license terms remain in their packages. No project license file is currently provided, so this README does not grant redistribution rights for the project or model.
+The bite pose takes motion reference from [Vibi's “Spider Attack Animation1”](https://www.youtube.com/watch?v=vBbR2uFKEls). No video artwork is bundled. Rendering uses [Three.js](https://threejs.org/) and its GLTFLoader; the production build includes [its license notice](public/THIRD-PARTY-NOTICES.txt). No project license file is currently provided, so this README does not grant redistribution rights for the project or model.

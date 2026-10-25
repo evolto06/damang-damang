@@ -1,11 +1,27 @@
-import { createWorld, stepWorld, COMBAT } from './combat.js';
+import { createWorld, stepWorld, COMBAT } from "./combat.js";
 
-export const CLOCK = Object.freeze({ step: 1 / COMBAT.tickRate, maxDelta: 0.1, maxSteps: 6 });
-export const createClock = () => ({ previous: null, accumulator: 0, simulationTime: 0 });
-export function resetClock(clock) { clock.previous = null; clock.accumulator = 0; clock.simulationTime = 0; }
+export const CLOCK = Object.freeze({
+  step: 1 / COMBAT.tickRate,
+  maxDelta: 0.1,
+  maxSteps: 6,
+});
+export const createClock = () => ({
+  previous: null,
+  accumulator: 0,
+  simulationTime: 0,
+});
+export function resetClock(clock) {
+  clock.previous = null;
+  clock.accumulator = 0;
+  clock.simulationTime = 0;
+}
 export function runClock(clock, timestamp, callback) {
   if (!Number.isFinite(timestamp)) return 0;
-  if (clock.previous === null) { clock.previous = timestamp; clock.simulationTime = timestamp; return 0; }
+  if (clock.previous === null) {
+    clock.previous = timestamp;
+    clock.simulationTime = timestamp;
+    return 0;
+  }
   const delta = (timestamp - clock.previous) / 1000;
   if (delta <= 0) return 0;
   clock.previous = timestamp;
@@ -16,63 +32,126 @@ export function runClock(clock, timestamp, callback) {
     clock.accumulator = Math.max(0, clock.accumulator - CLOCK.step);
     steps++;
     clock.simulationTime += CLOCK.step * 1000;
-    if (callback(clock.simulationTime) === false) { clock.accumulator = 0; break; }
+    if (callback(clock.simulationTime) === false) {
+      clock.accumulator = 0;
+      break;
+    }
   }
-  if (steps === CLOCK.maxSteps && clock.accumulator >= CLOCK.step) { clock.simulationTime += clock.accumulator * 1000; clock.accumulator = 0; }
+  if (steps === CLOCK.maxSteps && clock.accumulator >= CLOCK.step) {
+    clock.simulationTime += clock.accumulator * 1000;
+    clock.accumulator = 0;
+  }
   return steps;
 }
 const createControls = () => ({ direction: 0, inputs: [] });
-export function createRuntime({ createOpponent = () => ({}), decideOpponent = () => ({}), mode = 'bot', stage = 'single' } = {}) {
+export function createRuntime({
+  createOpponent = () => ({}),
+  decideOpponent = () => ({}),
+  mode = "bot",
+  stage = "single",
+} = {}) {
   const world = createWorld(stage);
-  return { stage: world.stage.id, world, clock: createClock(), ready: false, paused: false, alpha: 1, mode, controls: [createControls(), createControls()], createOpponent, decideOpponent, ai: createOpponent() };
+  return {
+    stage: world.stage.id,
+    world,
+    clock: createClock(),
+    ready: false,
+    paused: false,
+    alpha: 1,
+    mode,
+    controls: [createControls(), createControls()],
+    createOpponent,
+    decideOpponent,
+    ai: createOpponent(),
+  };
 }
-export function clearActions(runtime) { for (const controls of runtime.controls) { controls.direction = 0; controls.inputs.length = 0; } }
-export function setReady(runtime, ready) { runtime.ready = ready; runtime.alpha = 1; clearActions(runtime); resetClock(runtime.clock); }
+export function clearActions(runtime) {
+  for (const controls of runtime.controls) {
+    controls.direction = 0;
+    controls.inputs.length = 0;
+  }
+}
+export function setReady(runtime, ready) {
+  runtime.ready = ready;
+  runtime.alpha = 1;
+  clearActions(runtime);
+  resetClock(runtime.clock);
+}
 function queue(runtime, fighter, kind, value, timestamp) {
   const controls = runtime.controls[fighter];
-  if (!controls || (runtime.mode === 'bot' && fighter !== 0)) return false;
-  if (!runtime.ready || runtime.paused || runtime.world.status !== 'playing') return false;
-  const at = Number.isFinite(timestamp) ? timestamp : runtime.clock.previous ?? 0;
+  if (!controls || (runtime.mode === "bot" && fighter !== 0)) return false;
+  if (!runtime.ready || runtime.paused || runtime.world.status !== "playing")
+    return false;
+  const at = Number.isFinite(timestamp)
+    ? timestamp
+    : (runtime.clock.previous ?? 0);
   controls.inputs.push({ kind, value, at });
   controls.inputs.sort((a, b) => a.at - b.at);
   return true;
 }
 // Events are consumed once at their first eligible tick, including when a busy
 // fighter rejects them. They never become a buffered attack after recovery.
-export const queueAction = (runtime, fighter, kind, timestamp) => ['bite', 'dash', 'drop', 'web', 'shoot'].includes(kind) && queue(runtime, fighter, kind, true, timestamp);
-export const queueDirection = (runtime, fighter, direction, timestamp) => queue(runtime, fighter, 'direction', Math.sign(direction), timestamp);
+export const queueAction = (runtime, fighter, kind, timestamp) =>
+  ["bite", "dash", "drop", "web", "shoot"].includes(kind) &&
+  queue(runtime, fighter, kind, true, timestamp);
+export const queueDirection = (runtime, fighter, direction, timestamp) =>
+  queue(runtime, fighter, "direction", Math.sign(direction), timestamp);
 export function pauseRuntime(runtime, value) {
-  clearActions(runtime); resetClock(runtime.clock);
-  if (runtime.world.status === 'ended') return false;
-  runtime.paused = value; return true;
+  clearActions(runtime);
+  resetClock(runtime.clock);
+  if (runtime.world.status === "ended") return false;
+  runtime.paused = value;
+  return true;
 }
 export function restartRuntime(runtime, nowMs = 0, stage = runtime.stage) {
-  runtime.world = createWorld(stage); runtime.stage = runtime.world.stage.id; runtime.ai = runtime.createOpponent(); runtime.paused = false; runtime.alpha = 1;
-  clearActions(runtime); resetClock(runtime.clock);
+  runtime.world = createWorld(stage);
+  runtime.stage = runtime.world.stage.id;
+  runtime.ai = runtime.createOpponent();
+  runtime.paused = false;
+  runtime.alpha = 1;
+  clearActions(runtime);
+  resetClock(runtime.clock);
 }
 function sampleAction(controls, tickTime) {
   const action = { direction: controls.direction };
   while (controls.inputs.length && controls.inputs[0].at <= tickTime + 1e-7) {
     const input = controls.inputs.shift();
-    if (input.kind === 'direction') controls.direction = action.direction = input.value;
+    if (input.kind === "direction")
+      controls.direction = action.direction = input.value;
     else action[input.kind] = true;
   }
   return action;
 }
 export function frameRuntime(runtime, timestamp) {
-  if (!runtime.ready || runtime.paused || runtime.world.status !== 'playing') { resetClock(runtime.clock); runtime.alpha = 1; return 0; }
+  if (!runtime.ready || runtime.paused || runtime.world.status !== "playing") {
+    resetClock(runtime.clock);
+    runtime.alpha = 1;
+    return 0;
+  }
   const rebased = runtime.clock.previous === null;
-  const steps = runClock(runtime.clock, timestamp, tickTime => {
+  const steps = runClock(runtime.clock, timestamp, (tickTime) => {
     const actions = [sampleAction(runtime.controls[0], tickTime)];
-    if (runtime.mode === 'pvp') actions.push(sampleAction(runtime.controls[1], tickTime));
-    else actions.push(runtime.world.hitstop > 0 ? {} : runtime.decideOpponent(runtime.ai, runtime.world));
+    if (runtime.mode === "pvp")
+      actions.push(sampleAction(runtime.controls[1], tickTime));
+    else
+      actions.push(
+        runtime.world.hitstop > 0
+          ? {}
+          : runtime.decideOpponent(runtime.ai, runtime.world),
+      );
     stepWorld(runtime.world, actions);
-    if (runtime.world.status === 'ended') { clearActions(runtime); return false; }
+    if (runtime.world.status === "ended") {
+      clearActions(runtime);
+      return false;
+    }
     return true;
   });
   // Alpha is the fraction of the next fixed tick already elapsed. Presentation
   // blends the last two tick states with it instead of snapping at 60 Hz. A
   // clock rebase has no previous tick to blend from, so show the current state.
-  runtime.alpha = runtime.world.status === 'playing' && !rebased ? Math.max(0, Math.min(1, runtime.clock.accumulator / CLOCK.step)) : 1;
+  runtime.alpha =
+    runtime.world.status === "playing" && !rebased
+      ? Math.max(0, Math.min(1, runtime.clock.accumulator / CLOCK.step))
+      : 1;
   return steps;
 }

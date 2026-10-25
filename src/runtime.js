@@ -1,3 +1,4 @@
+import { advanceCoaching } from './match-flow.js';
 import { createWorld, stepWorld, COMBAT } from './combat.js';
 
 export const CLOCK = Object.freeze({ step: 1 / COMBAT.tickRate, maxDelta: 0.1, maxSteps: 6 });
@@ -66,8 +67,10 @@ export function frameRuntime(runtime, timestamp) {
   const steps = runClock(runtime.clock, timestamp, tickTime => {
     const actions = [sampleAction(runtime.controls[0], tickTime)];
     if (runtime.mode === 'pvp') actions.push(sampleAction(runtime.controls[1], tickTime));
-    else actions.push(runtime.world.hitstop > 0 ? {} : runtime.decideOpponent(runtime.ai, runtime.world));
+    else actions.push(runtime.world.hitstop > 0 || runtime.coaching?.step === 'move' ? {} : runtime.decideOpponent(runtime.ai, runtime.world));
+    const before = runtime.coaching ? { ...runtime.world.fighters[0] } : null;
     stepWorld(runtime.world, actions);
+    if (runtime.mode === 'bot' && before) advanceCoaching(runtime.coaching, before, runtime.world.fighters[0]);
     if (runtime.world.status === 'ended') { clearActions(runtime); return false; }
     return true;
   });

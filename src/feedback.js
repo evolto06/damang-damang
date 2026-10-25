@@ -38,7 +38,7 @@ export function hintsFor(world, index = 0, mode = 'bot', input = 'keyboard') {
 }
 const returnPrompt = (fighter, keys) => ({
   falling: `Falling · Press ${keys.web} / Web to return.`,
-  grounded: `On pavement · Press ${keys.web} / Web to return before time runs out.`,
+  grounded: `On pavement · Press ${keys.web} / Web to return before time runs out; pavement contact costs health.`,
   deploying: 'Casting silk · Return is automatic.',
   swinging: `Swinging · ${keys.move} steers; climbing starts automatically.`,
   reeling: `Climbing · ${keys.move} steers; wait for the grip.`,
@@ -46,12 +46,12 @@ const returnPrompt = (fighter, keys) => ({
 })[fighter.air.mode];
 
 // Presentation reads the same eligibility gates as combat; it never queues input.
-export function fightFeedback(runtime) {
+export function fightFeedback(runtime, index = 0) {
   const { world, ready, paused } = runtime;
-  const [player, opponent] = world.fighters;
+  const player = world.fighters[index], opponent = world.fighters[1 - index];
   const pvp = runtime.mode === 'pvp';
-  const keys = keysFor(runtime.mode, 0, runtime.inputSources?.[0]);
-  const opponentName = pvp ? 'P2' : 'Opponent';
+  const keys = keysFor(runtime.mode, index, runtime.inputSources?.[index]);
+  const opponentName = pvp ? (index ? 'P1' : 'P2') : 'Opponent';
   const lifecycle = world.status !== 'playing' ? 'Round over' : paused ? 'Paused' : !ready ? 'Loading' : '';
   const frozen = lifecycle || (world.hitstop > 0 ? 'Contact hold' : '');
   const attached = isAttached(player), waiting = attached && !isAttached(opponent);

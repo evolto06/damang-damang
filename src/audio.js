@@ -28,7 +28,7 @@ export function createGameAudio({ Context = globalThis.AudioContext ?? globalThi
     if (kind === 'web') tone(1300, 280, 0.14, 0, 'sine', 0.04);
     if (kind === 'hit') tone(130, 42, 0.15, 0, 'triangle', 0.09);
     if (kind === 'stun') tone(460, 800, 0.12, 0, 'sine', 0.035);
-    if (kind === 'end') { tone(330, 330, 0.2); tone(440, 440, 0.25, 0.15); tone(660, 660, 0.35, 0.3); }
+    if (kind === 'end') tone(110, 55, 0.35, 0, 'triangle', 0.06);
   }
   return {
     get muted() { return muted; },

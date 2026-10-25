@@ -146,12 +146,41 @@ test('reattachment eases each leg and palp back to the unchanged attached rig', 
   assert.ok(rig.palps.every((palp) => palp.group.rotation.x === 0 && palp.group.rotation.y === 0));
 });
 
-test('detached spiders turn upright and restore inversion near the twig in both headings', () => {
+test('casting silk rolls the fallen spider back into the inverted return pose', () => {
+  const world = createWorld(),
+    fighter = world.fighters[0],
+    rig = createSpiderRig(source, 0);
+  stepWorld(world, [{ drop: true }, {}]);
+  for (let tick = 0; tick < 40; tick++) stepWorld(world);
+  rig.update(fighter.x, fighter);
+  assert.equal(rig.inverted.rotation.z, 0);
+  stepWorld(world, [{ web: true }, {}]);
+  rig.update(fighter.x, fighter);
+  assert.ok(rig.inverted.rotation.z > 0 && rig.inverted.rotation.z < 0.1);
+  let previous = rig.inverted.rotation.z;
+  for (let tick = 0; tick < 18; tick++) {
+    stepWorld(world);
+    rig.update(fighter.x, fighter);
+    assert.ok(rig.inverted.rotation.z >= previous - 1e-9);
+    previous = rig.inverted.rotation.z;
+  }
+  assert.equal(fighter.air.mode, 'swinging');
+  assert.equal(rig.inverted.rotation.z, Math.PI);
+});
+
+test('detached spiders turn upright during the drop and roll back to the grip inversion while returning', () => {
   for (const forward of [1, -1]) {
     const fighter = createWorld().fighters[0],
       rig = createSpiderRig(source, 0);
     fighter.forward = forward;
-    for (const mode of ['falling', 'grounded', 'deploying', 'swinging', 'reeling', 'reattaching']) {
+    for (const [mode, upright] of [
+      ['falling', true],
+      ['grounded', true],
+      ['deploying', false],
+      ['swinging', false],
+      ['reeling', false],
+      ['reattaching', false],
+    ]) {
       Object.assign(fighter.air, {
         mode,
         y: -1.8,
@@ -162,15 +191,25 @@ test('detached spiders turn upright and restore inversion near the twig in both 
       });
       for (let age = 24; age < 100; age += 7) {
         fighter.air.animationTicks = age;
+        fighter.air.retrievalTicks = upright ? 0 : Math.min(age, 24);
         if (mode !== 'reattaching') fighter.air.ticks = age;
         rig.update(fighter.x, fighter);
         rig.root.updateMatrixWorld(true);
         const dorsal = new THREE.Vector3(0, 1, 0).transformDirection(rig.inverted.matrixWorld);
-        assert.ok(dorsal.y > 0.9, `${mode}: abdomen faces upright`);
-        for (const leg of rig.legs) {
-          const hip = leg.hip.clone().applyMatrix4(rig.inverted.matrixWorld);
-          const toe = leg.contact.clone().applyMatrix4(rig.inverted.matrixWorld);
-          assert.ok(toe.y < hip.y, `${mode} ${leg.name}: feet face the ground`);
+        if (upright) {
+          assert.ok(dorsal.y > 0.9, `${mode}: abdomen faces upright`);
+          for (const leg of rig.legs) {
+            const hip = leg.hip.clone().applyMatrix4(rig.inverted.matrixWorld);
+            const toe = leg.contact.clone().applyMatrix4(rig.inverted.matrixWorld);
+            assert.ok(toe.y < hip.y, `${mode} ${leg.name}: feet face the ground`);
+          }
+        } else {
+          assert.ok(dorsal.y < -0.9, `${mode}: abdomen faces down`);
+          for (const leg of rig.legs) {
+            const hip = leg.hip.clone().applyMatrix4(rig.inverted.matrixWorld);
+            const toe = leg.contact.clone().applyMatrix4(rig.inverted.matrixWorld);
+            assert.ok(toe.y > hip.y, `${mode} ${leg.name}: feet face the twig above`);
+          }
         }
       }
     }

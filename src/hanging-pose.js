@@ -45,8 +45,10 @@ export function hangingPose(fighter, forward = fighter?.forward ?? 1) {
     air.mode === 'reeling' && !air.blocked
       ? smooth(air.ticks / 10) * clamp(air.vy / AIR.reelSpeed, 0, 1)
       : 0;
-  const retrieving = ['deploying', 'swinging', 'reeling', 'reattaching'].includes(air.mode);
-  const upright =
-    smooth(age / 18) * (retrieving ? smooth(((air.targetY ?? 0) - air.y - 0.3) / 0.9) : 1);
+  const retrieving = suspended;
+  const castAge = Math.max(0, age - (air.retrievalTicks ?? 0));
+  const upright = retrieving
+    ? smooth(castAge / 18) * (1 - smooth((air.retrievalTicks ?? 0) / 18))
+    : smooth(age / 18);
   return { blend, upright, pitch, phase, motion, climb, drift };
 }

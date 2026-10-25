@@ -75,6 +75,7 @@ export const createAir = (y = 0) => ({
   vy: 0,
   ticks: 0,
   animationTicks: 0,
+  retrievalTicks: 0,
   anchorX: 0,
   anchorY: 0,
   anchorZ: 0,
@@ -113,6 +114,7 @@ export function releaseStick(fighter) {
   air.mode = 'falling';
   air.ticks = 0;
   air.animationTicks = 0;
+  air.retrievalTicks = 0;
   air.releaseY = air.y;
   air.targetY = air.y;
   air.groundTicks = 0;
@@ -265,6 +267,7 @@ export function advanceAerial(fighter, other, index, action) {
     if (!target) return true;
     air.mode = 'deploying';
     air.ticks = 0;
+    air.retrievalTicks = 0;
     // Silk is fired from the spinneret at the moment of the cast, so the anchor
     // sits above the current position rather than the earlier drop point. A
     // moving spider otherwise attaches to a rope angled behind it, which turns
@@ -286,6 +289,11 @@ export function advanceAerial(fighter, other, index, action) {
   if (air.mode === 'grounded') return true;
   air.ticks++;
   air.animationTicks = (air.animationTicks ?? 0) + 1;
+  if (
+    ['deploying', 'swinging', 'reeling', 'reattaching'].includes(air.mode) &&
+    air.y > AIR.groundY + 0.6
+  )
+    air.retrievalTicks = (air.retrievalTicks ?? 0) + 1;
   if (air.mode === 'reattaching') {
     const t = Math.min(1, air.ticks / AIR.reattachTicks);
     const fall = (1 - t) * (1 - t);

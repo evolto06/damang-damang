@@ -18,6 +18,9 @@ human playtesting. Report the arena, match mode, device, and steps for any probl
    return to the inverted grip look convincing.
    In PvP, move the other spider while one swings; walking, lunge and drop should
    remain available, with walking still stopped at twig ends and gaps.
+   On a raised arena, run toward a gap, drop and cast soon while still steering.
+   A strong swing can rise above the webbed twig before returning; check for a
+   smooth arc rather than an invisible ceiling or a sudden downward snap.
 3. **Arenas.** Try One stick, Twin sticks, Stepped sticks and Terraces. At a gap, drop toward the
    other side, fall for about half a second, then cast. The bot can follow. Try
    crossing from both heights, returning under an opponent, and following the

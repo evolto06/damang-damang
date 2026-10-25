@@ -227,12 +227,18 @@ function advancePendulum(fighter, other, index, offset, direction) {
     const [low, high] = legalBounds(fighter, other, index);
     // Obstacles stop tangential motion while keeping the outlet on the rope's
     // circle. Clamping x and y separately would stretch or slacken visible silk.
-    const topAngle = Math.acos(clamp((centerY - air.targetY + 0.001) / length, 0, 1));
-    angle = clamp(
-      freeAngle,
-      Math.max(-topAngle, Math.asin(clamp((low - centerX) / length, -1, 1))),
-      Math.min(topAngle, Math.asin(clamp((high - centerX) / length, -1, 1))),
-    );
+    angle = freeAngle;
+    const proposedX = centerX + length * Math.sin(angle);
+    if (proposedX < low || proposedX > high) {
+      const edge = proposedX < low ? low : high;
+      const principal = Math.asin(clamp((edge - centerX) / length, -1, 1));
+      // Both sides of the circle can share an x coordinate. Keep the branch
+      // nearest the current arc rather than forcing every swing below its twig.
+      const turns = Math.PI * 2;
+      angle = [principal, Math.PI - principal]
+        .map((value) => value + turns * Math.round((previousAngle - value) / turns))
+        .sort((a, b) => Math.abs(a - previousAngle) - Math.abs(b - previousAngle))[0];
+    }
     const floorAngle = Math.acos(clamp((centerY - AIR.groundY) / length, 0, 1));
     if (Math.abs(angle) < floorAngle)
       angle = (Math.sign(previousAngle) || Math.sign(angle) || 1) * floorAngle;
@@ -348,13 +354,17 @@ export function advanceAerial(fighter, other, index, action) {
     }
   }
   // The powered climb engages once the arc has had time to develop and stops
-  // fighting downward momentum: switch on the upswing, or after a motionless
-  // hang, or at the swing limit. The winch then eases in over a few ticks.
+  // fighting downward momentum. Let an upswing that can clear the twig finish
+  // its arc first, then engage below the grip rather than snapping down to it.
   if (air.mode === 'swinging') {
     const speed = Math.hypot(air.vx, air.vy);
+    const risingAboveTwig =
+      air.vy > 0 && air.y + air.vy ** 2 / (2 * AIR.swingGravity) > air.targetY + 0.05;
     if (
-      air.ticks >= AIR.swingTicks ||
-      (air.ticks >= AIR.swingMinTicks && (air.vy >= AIR.reelEngageVy || speed < 0.4))
+      air.y <= air.targetY - 0.001 &&
+      !risingAboveTwig &&
+      (air.ticks >= AIR.swingTicks ||
+        (air.ticks >= AIR.swingMinTicks && (air.vy >= AIR.reelEngageVy || speed < 0.4)))
     ) {
       air.mode = 'reeling';
       air.ticks = 0;

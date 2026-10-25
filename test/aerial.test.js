@@ -357,6 +357,58 @@ test('A/D applies opposing tangential force and a released pump retains swing mo
   assert.ok(Math.abs(left.fighters[0].x + right.fighters[0].x + 4) < 1e-9);
   assert.equal(neutral.fighters[0].x, -2);
 });
+
+test('a fast free swing can rise above its webbed twig without a height clamp or position jump', () => {
+  for (const direction of [-1, 1])
+    for (const age of [0, AIR.swingMinTicks + 5]) {
+      const world = pendulumWorld(direction * 1.1, direction * 4.8, 1.2);
+      const fighter = world.fighters[0];
+      fighter.air.ticks = age;
+      let highest = fighter.air.y;
+      for (let tick = 0; tick < 25 && fighter.air.mode === 'swinging'; tick++) {
+        const before = { x: fighter.x, y: fighter.air.y };
+        stepWorld(world);
+        highest = Math.max(highest, fighter.air.y);
+        assert.ok(Math.hypot(fighter.x - before.x, fighter.air.y - before.y) < 0.15);
+      }
+      assert.ok(
+        highest > fighter.air.targetY + 0.1,
+        'momentum can carry the body above its original twig',
+      );
+      for (let tick = 0; tick < 500 && !isAttached(fighter); tick++) stepWorld(world);
+      assert.ok(isAttached(fighter), 'the overshoot still settles into an automatic return');
+    }
+});
+
+test('real run/drop/cast inputs can swing above the anchored height in both raised arenas', () => {
+  for (const stage of ['heights', 'terraces'])
+    for (const direction of [-1, 1]) {
+      const world = createWorld(stage),
+        [fighter, other] = world.fighters;
+      const rail = direction > 0 ? world.stage.sticks[0] : world.stage.sticks.at(-1);
+      const far = direction > 0 ? world.stage.sticks.at(-1) : world.stage.sticks[0];
+      fighter.x = direction > 0 ? rail.walk[1] - 1.5 : rail.walk[0] + 1.5;
+      fighter.air.y = rail.y;
+      other.x = direction > 0 ? far.walk[1] - 1 : far.walk[0] + 1;
+      other.air.y = far.y;
+      tick(world, 25, [{ direction }, {}]);
+      stepWorld(world, [{ drop: true, direction }, {}]);
+      let rise = -Infinity;
+      for (let frame = 0; frame < 500 && !isAttached(fighter); frame++) {
+        const before = fighter.air.y;
+        const steer = fighter.air.blocked ? fighter.air.clearDirection : direction;
+        stepWorld(world, [{ direction: steer, web: frame === 5 }, {}]);
+        if (fighter.air.mode === 'swinging')
+          rise = Math.max(rise, fighter.air.y - fighter.air.targetY);
+        assert.ok(
+          Math.abs(fighter.air.y - before) < 0.15,
+          'crossing the old cap never snaps vertically',
+        );
+      }
+      assert.ok(rise > 0.1, `${stage} direction ${direction}: rise ${rise}`);
+      assert.ok(isAttached(fighter));
+    }
+});
 test('powered reeling climbs at constant vertical speed while sideways swing and taut silk continue', () => {
   for (const angle of [-0.6, 0, 0.6])
     for (const direction of [-1, 0, 1]) {

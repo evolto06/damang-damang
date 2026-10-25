@@ -142,6 +142,49 @@ test('touch PvP supplies both players; keyboard PvP uses both players own bindin
   }
 });
 
+test('a running silk cast swings above its anchor height and returns without snapping', async ({
+  page,
+}, info) => {
+  await ready(page);
+  await page.locator('#stage-choice').selectOption('terraces');
+  await page.locator('#start-pvp').click();
+  await page.evaluate(() => {
+    window.__swingPeak = -Infinity;
+    let dropped = false,
+      cast = false;
+    const press = (code) => {
+      for (const type of ['keydown', 'keyup'])
+        window.dispatchEvent(new KeyboardEvent(type, { code, bubbles: true, cancelable: true }));
+    };
+    const observe = () => {
+      const fighter = window.__spiderDerby.getState().fighters[0];
+      if (!dropped && fighter.x > -5.7 && fighter.air.mode === 'attached') {
+        dropped = true;
+        press('KeyS');
+      }
+      // Schedule the quick cast in the page's frame loop. A round trip to the
+      // test process can take many game ticks under software WebGL rendering.
+      if (!cast && fighter.air.mode === 'falling' && fighter.air.ticks >= 3) {
+        cast = true;
+        press('KeyW');
+      }
+      if (fighter.air.mode === 'swinging') {
+        window.__swingPeak = Math.max(window.__swingPeak, fighter.air.y - fighter.air.targetY);
+      }
+      requestAnimationFrame(observe);
+    };
+    observe();
+  });
+  await page.keyboard.down('d');
+  await expect.poll(() => page.evaluate(() => window.__swingPeak)).toBeGreaterThan(0.08);
+  await page.screenshot({ path: info.outputPath('swing-above-anchor.png') });
+  await page.keyboard.up('d');
+  await page.keyboard.down('a');
+  await expect.poll(async () => (await state(page)).fighters[0].air.mode).toBe('attached');
+  await page.keyboard.up('a');
+  expect((await state(page)).fighters[0].air.y).toBe(1.25);
+});
+
 test('stepped arena and first-match coaching survive menu transitions and a reload', async ({
   page,
 }) => {

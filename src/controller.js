@@ -4,6 +4,7 @@ const BUTTONS = Object.freeze({
   web: 1,
   bite: 2,
   shoot: 3,
+  restart: 8,
   pause: 9,
   up: 12,
   drop: 13,
@@ -21,13 +22,31 @@ export function normalizeGamepad(gamepad, now) {
         (button) => !!button && (button.pressed === true || button.value > 0.5),
       )
     : [];
+  const axisX = Number.isFinite(gamepad.axes?.[0]) ? gamepad.axes[0] : 0;
+  const axisY = Number.isFinite(gamepad.axes?.[1]) ? gamepad.axes[1] : 0;
+  const dpadHeld = buttons[BUTTONS.left] || buttons[BUTTONS.right];
+  const direction = dpadHeld
+    ? Number(buttons[BUTTONS.right]) - Number(buttons[BUTTONS.left])
+    : Math.abs(axisX) >= 0.35
+      ? Math.sign(axisX)
+      : 0;
+  if (supported) {
+    buttons[BUTTONS.drop] ||= axisY >= 0.6;
+    buttons[BUTTONS.up] ||= axisY <= -0.6;
+  }
   const at =
     Number.isFinite(gamepad.timestamp) &&
     gamepad.timestamp > 0 &&
     gamepad.timestamp <= now
       ? gamepad.timestamp
       : now;
-  return { key: `${gamepad.index}:${gamepad.id}`, supported, buttons, at };
+  return {
+    key: `${gamepad.index}:${gamepad.id}`,
+    supported,
+    buttons,
+    direction,
+    at,
+  };
 }
 
 export function createControllerInput() {
@@ -118,7 +137,8 @@ export function createControllerInput() {
         if (!pad || !context.focused) return null;
         if (!slot.armed) {
           // A reveal, reconnect, mode change or resume requires full neutral first.
-          slot.armed = !usedButtons.some((index) => pad.buttons[index]);
+          slot.armed =
+            !pad.direction && !usedButtons.some((index) => pad.buttons[index]);
           slot.previous = pad.buttons;
           return null;
         }
@@ -141,6 +161,18 @@ export function createControllerInput() {
       const participating = edges
         .slice(0, context.started && context.mode !== "pvp" ? 1 : 2)
         .filter(Boolean);
+      if (context.navigateUI) {
+        result.navigation = participating.flatMap(({ pressed }) => [
+          ...(pressed.up ? ["previous"] : []),
+          ...(pressed.drop ? ["next"] : []),
+          ...(pressed.left ? ["left"] : []),
+          ...(pressed.right ? ["right"] : []),
+          ...(pressed.dash ? ["confirm"] : []),
+        ]);
+        if (context.paused && participating.some((edge) => edge.pressed.pause))
+          result.command = "resume";
+        return result;
+      }
       if (!context.started) {
         if (participating.some((edge) => edge.pressed.up)) selectedMode = "bot";
         else if (participating.some((edge) => edge.pressed.drop))
@@ -164,7 +196,8 @@ export function createControllerInput() {
       ) {
         if (!context.paused) result.command = "pause";
         else result.command = "resume";
-      }
+      } else if (participating.some((edge) => edge.pressed.restart))
+        result.command = "restart";
       if (
         result.command ||
         !context.ready ||
@@ -175,9 +208,7 @@ export function createControllerInput() {
         return result;
       for (const { fighter, pad, pressed } of participating) {
         const slot = slots[fighter];
-        const nextDirection =
-          Number(pad.buttons[BUTTONS.right]) -
-          Number(pad.buttons[BUTTONS.left]);
+        const nextDirection = pad.direction;
         if (nextDirection !== slot.direction) {
           slot.direction = nextDirection;
           const direction = { fighter, value: nextDirection, at: pad.at };

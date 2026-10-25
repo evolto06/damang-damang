@@ -80,7 +80,12 @@ export function launchWeb(fighter, target, source) {
 // Sweep the finite bolt against a moving head volume inside the supplied
 // prosoma silhouette. Relative motion prevents tunnelling during a lunge.
 export function webContact(shot, target, previousTarget) {
-  if (!isAttached(target) || target.hp <= 0 || target.phase === "ko")
+  if (
+    !isAttached(target) ||
+    target.hp <= 0 ||
+    target.phase === "ko" ||
+    target.phase === "lungeactive"
+  )
     return null;
   const startCenter = headCenter(previousTarget),
     endCenter = headCenter(target);

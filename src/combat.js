@@ -7,18 +7,26 @@ import {
 } from "./bite-profile.js";
 import { WEB, webPose, launchWeb, advanceWebs } from "./web-attack.js";
 import {
+  AIR,
   createAir,
   isAttached,
   releaseStick,
   advanceAerial,
 } from "./aerial.js";
-import { getStage, sameStick } from "./stage.js";
+import { getStage, sameStick, stickHeight } from "./stage.js";
 
 export const COMBAT = Object.freeze({
   tickRate: 60,
   windup: 18,
   active: 6,
   recovery: 21,
+  lungewindup: 8,
+  lungeactive: 9,
+  lungerecovery: 24,
+  lungeDamage: 30,
+  groundDamage: 10,
+  groundInterval: 60,
+  groundBurn: 5,
   hitstun: 11,
   hitstop: 6,
   maxHealth: 100,
@@ -40,7 +48,7 @@ function createFighter(id, x, forward, stage) {
     id,
     stage,
     hp: COMBAT.maxHealth,
-    air: createAir(),
+    air: createAir(stickHeight(x, stage)),
     phase: "idle",
     phaseTicks: 0,
     pose: bitePose("idle"),
@@ -97,7 +105,20 @@ const enter = (fighter, phase) => {
   fighter.phaseTicks = 0;
 };
 const fighterPose = (fighter) => ({
-  ...bitePose(fighter.phase, fighter.phaseTicks),
+  ...bitePose(
+    fighter.phase === "lungewindup"
+      ? "windup"
+      : fighter.phase === "lungeactive"
+        ? "active"
+        : fighter.phase === "lungerecovery"
+          ? "recovery"
+          : fighter.phase,
+    fighter.phase === "lungewindup"
+      ? (fighter.phaseTicks * COMBAT.windup) / COMBAT.lungewindup
+      : fighter.phase === "lungeactive"
+        ? 2
+        : fighter.phaseTicks,
+  ),
   ...webPose(fighter.phase, fighter.phaseTicks),
 });
 function transition(fighter) {
@@ -117,6 +138,9 @@ function transition(fighter) {
       windup: "active",
       active: "recovery",
       recovery: "idle",
+      lungewindup: "lungeactive",
+      lungeactive: "lungerecovery",
+      lungerecovery: "idle",
       hitstun: "idle",
       webwindup: "webrelease",
       webrelease: "webrecovery",
@@ -192,7 +216,7 @@ export function stepWorld(world, actions = [{}, {}]) {
     if (
       advanceAerial(
         fighter,
-        world.fighters[1 - index],
+        previous[1 - index],
         index,
         dropping[index] ? { ...action, web: false } : action,
       )
@@ -204,6 +228,19 @@ export function stepWorld(world, actions = [{}, {}]) {
       fighter.pose = fighterPose(fighter);
       moveFighter(fighter, {}, 1 / COMBAT.tickRate, false);
       continue;
+    }
+    if (
+      action.dash &&
+      !action.bite &&
+      !action.shoot &&
+      fighter.phase === "idle" &&
+      fighter.cooldown <= 1e-8 &&
+      fighter.dashRemaining <= 1e-9
+    ) {
+      enter(fighter, "lungewindup");
+      fighter.lungeDirection = Math.sign(action.direction || fighter.forward);
+      fighter.attackId++;
+      fighter.attackHit = false;
     }
     if (
       action.bite &&
@@ -226,11 +263,14 @@ export function stepWorld(world, actions = [{}, {}]) {
       fighter.webId++;
     }
     fighter.pose = fighterPose(fighter);
+    const lunging = fighter.phase === "lungeactive";
     moveFighter(
       fighter,
-      action.bite ? { direction: action.direction } : action,
+      lunging
+        ? { direction: fighter.lungeDirection, dash: fighter.phaseTicks === 0 }
+        : { direction: action.direction },
       1 / COMBAT.tickRate,
-      fighter.phase === "idle",
+      fighter.phase === "idle" || lunging,
     );
   }
   if (world.fighters.every(isAttached))
@@ -269,7 +309,7 @@ export function stepWorld(world, actions = [{}, {}]) {
   for (let index = 0; index < 2; index++) {
     const fighter = world.fighters[index];
     if (
-      fighter.phase !== "active" ||
+      !["active", "lungeactive"].includes(fighter.phase) ||
       fighter.attackHit ||
       !world.fighters.every(isAttached) ||
       !previous.every((f) => f.attached) ||
@@ -287,7 +327,8 @@ export function stepWorld(world, actions = [{}, {}]) {
         type: "hit",
         source: index,
         target: 1 - index,
-        damage: COMBAT.damage,
+        damage:
+          fighter.phase === "lungeactive" ? COMBAT.lungeDamage : COMBAT.damage,
         attackId: fighter.attackId,
         contact,
       });
@@ -312,7 +353,27 @@ export function stepWorld(world, actions = [{}, {}]) {
     target.hitTick = world.tick;
     enter(target, target.hp ? "hitstun" : "ko");
   }
-  world.events = [...webHits, ...hits];
+  const groundHits = [];
+  world.fighters.forEach((fighter, index) => {
+    if (fighter.air.y > AIR.groundY + 1e-8 || isAttached(fighter)) {
+      fighter.air.groundTicks = 0;
+      return;
+    }
+    const landed = previous[index].air.y > AIR.groundY + 1e-8;
+    fighter.air.groundTicks = landed ? 0 : (fighter.air.groundTicks ?? 0) + 1;
+    const damage = landed
+      ? COMBAT.groundDamage
+      : fighter.air.groundTicks > 0 &&
+          fighter.air.groundTicks % COMBAT.groundInterval === 0
+        ? COMBAT.groundBurn
+        : 0;
+    if (!damage) return;
+    fighter.hp = Math.max(0, fighter.hp - damage);
+    fighter.hitTick = world.tick;
+    if (!fighter.hp) enter(fighter, "ko");
+    groundHits.push({ type: "groundhit", target: index, damage });
+  });
+  world.events = [...webHits, ...hits, ...groundHits];
   if (world.fighters.some((fighter) => !fighter.hp)) endRound(world, "ko");
   else if (!world.remainingTicks) endRound(world, "timeout");
   for (const fighter of world.fighters)

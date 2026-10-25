@@ -31,6 +31,15 @@ export const STAGES = Object.freeze({
       { walk: [0.75, 13.5], body: [0.6, 15], y: 0 },
     ],
   }),
+  terraces: freezeStage({
+    id: "terraces",
+    name: "Terraces",
+    start: [-6.75, 6.75],
+    sticks: [
+      { walk: [-13.5, -0.75], body: [-15, -0.6], y: 0 },
+      { walk: [0.75, 13.5], body: [0.6, 15], y: 1.25 },
+    ],
+  }),
 });
 export const getStage = (value = "single") =>
   typeof value === "string"
@@ -44,6 +53,17 @@ const nearest = (x, key, layout) =>
 const clamp = (x, [a, b]) => Math.max(a, Math.min(b, x));
 export const twigAt = (x, layout) => nearest(x, "body", layout).body;
 export const stickAt = (x, layout) => nearest(x, "walk", layout).walk;
+export const stickHeight = (x, layout) => nearest(x, "walk", layout).y;
+// Cast only toward twigs above the outlet. Horizontal distance remains primary
+// so a deliberate crossing targets the destination rather than the old rail.
+export function silkTarget(x, y, layout) {
+  const sticks = getStage(layout).sticks.filter((stick) => stick.y > y + 0.05);
+  return sticks.reduce(
+    (best, stick) =>
+      !best || gap(x, stick.body) < gap(x, best.body) ? stick : best,
+    null,
+  );
+}
 export const sameStick = (a, b, layout) =>
   stickAt(a, layout) === stickAt(b, layout);
 export const clampToStick = (x, ref = x, layout) =>

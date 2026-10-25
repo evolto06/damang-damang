@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createWorld, stepWorld } from "../src/combat.js";
+import { createWorld, stepWorld, COMBAT } from "../src/combat.js";
 import { RULES } from "../src/movement.js";
 
 const tick = (world, count, actions) => {
@@ -9,7 +9,8 @@ const tick = (world, count, actions) => {
 function legal(world) {
   const [left, right] = world.fighters;
   assert.ok(left.x >= -RULES.limit && right.x <= RULES.limit);
-  assert.ok(right.x - left.x >= RULES.separation - 1e-9);
+  if (world.fighters.every((f) => f.air.mode === "attached"))
+    assert.ok(right.x - left.x >= RULES.separation - 1e-9);
 }
 test("both fighters accelerate and brake, with mirrored movement", () => {
   const world = createWorld();
@@ -33,7 +34,7 @@ test("simultaneous inward movement and opposing dashes remain symmetric without 
 });
 test("ordinary movement cannot push a stationary opponent", () => {
   const world = createWorld();
-  tick(world, 600, [{ direction: 1, dash: true }, {}]);
+  tick(world, 600, [{ direction: 1 }, {}]);
   assert.equal(world.fighters[1].x, RULES.opponentX);
   assert.ok(
     Math.abs(world.fighters[1].x - world.fighters[0].x - RULES.separation) <
@@ -46,6 +47,7 @@ test("outward movement clamps both ends and an idle dash faces inward", () => {
   assert.equal(world.fighters[0].x, -RULES.limit);
   assert.equal(world.fighters[1].x, RULES.limit);
   stepWorld(world, [{ dash: true }, { dash: true }]);
+  tick(world, COMBAT.lungewindup);
   assert.ok(
     world.fighters[0].x > -RULES.limit && world.fighters[1].x < RULES.limit,
   );
@@ -56,8 +58,10 @@ test("dash cooldown rejects rapid retries and becomes available again", () => {
   stepWorld(world, [{ dash: true, direction: -1 }, {}]);
   tick(world, 20, [{ dash: true, direction: -1 }, {}]);
   assert.ok(world.fighters[0].cooldown < RULES.dashCooldown - 0.2);
-  tick(world, 40, [{}, {}]);
+  tick(world, 50, [{}, {}]);
   assert.equal(world.fighters[0].cooldown, 0);
   stepWorld(world, [{ dash: true }, {}]);
+  assert.equal(world.fighters[0].phase, "lungewindup");
+  tick(world, COMBAT.lungewindup);
   assert.ok(world.fighters[0].dashRemaining > 0);
 });

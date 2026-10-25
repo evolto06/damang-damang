@@ -55,6 +55,9 @@ export function createGameAudio({
     if (kind === "web") tone(1300, 280, 0.14, 0, "sine", 0.04);
     if (kind === "hit") tone(130, 42, 0.15, 0, "triangle", 0.09);
     if (kind === "stun") tone(460, 800, 0.12, 0, "sine", 0.035);
+    if (kind === "lunge") tone(230, 700, 0.12, 0, "triangle", 0.025);
+    if (kind === "ground") tone(85, 25, 0.2, 0, "triangle", 0.075);
+    if (kind === "grip") tone(480, 260, 0.07, 0, "sine", 0.02);
     if (kind === "end") {
       tone(330, 330, 0.2);
       tone(440, 440, 0.25, 0.15);
@@ -110,6 +113,12 @@ export function createGameAudio({
             cue("web");
           if (fighter.phase === "webstun" && before.phase !== "webstun")
             cue("stun");
+          if (fighter.phase === "lungeactive" && before.phase !== "lungeactive")
+            cue("lunge");
+          if (fighter.air === "grounded" && before.air !== "grounded")
+            cue("ground");
+          if (fighter.air === "attached" && before.air !== "attached")
+            cue("grip");
         });
         if (current.status === "ended" && previous.status !== "ended")
           cue("end");

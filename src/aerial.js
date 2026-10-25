@@ -1,12 +1,20 @@
 import { BITE } from "./bite-profile.js";
 import { MAP_SCALE, RULES } from "./movement.js";
-import { clampToStick, clampToTwig, span, twigAt, sameStick } from "./stage.js";
+import {
+  clampToStick,
+  clampToTwig,
+  span,
+  twigAt,
+  sameStick,
+  stickHeight,
+  silkTarget,
+} from "./stage.js";
 
 const STICK_LIFT = 1.3;
 export const AIR = Object.freeze({
   gravity: 8,
   terminalSpeed: 6.5,
-  groundY: -3.3347 - STICK_LIFT,
+  groundY: -3.4396 - STICK_LIFT,
   stickY: 1.4 + STICK_LIFT,
   stickRadius: 0.075,
   leftRadius: 0.066,
@@ -59,13 +67,16 @@ export function stickSurfaceY(x, z, stage) {
       );
     }
   }
-  return bottom;
+  return bottom + stickHeight(x, stage);
 }
 export const isAttached = (fighter) =>
   !fighter.air || fighter.air.mode === "attached";
-export const createAir = () => ({
+export const createAir = (y = 0) => ({
   mode: "attached",
-  y: 0,
+  y,
+  releaseY: y,
+  targetY: y,
+  groundTicks: 0,
   vx: 0,
   vy: 0,
   ticks: 0,
@@ -110,7 +121,10 @@ export function releaseStick(fighter) {
     offset = outletOffset(fighter);
   air.mode = "falling";
   air.ticks = 0;
-  air.y = 0;
+  air.animationTicks = 0;
+  air.releaseY = air.y;
+  air.targetY = air.y;
+  air.groundTicks = 0;
   air.vx = fighter.velocity;
   air.vy = -0.12;
   air.landingX = fighter.x;
@@ -186,7 +200,7 @@ function advanceReeling(fighter, other, index, offset, direction) {
     const x = fighter.x + air.vx * dt;
     fighter.x = legalX(fighter, other, index, x);
     if (Math.abs(fighter.x - x) > 1e-9) air.vx = 0;
-    let nextY = Math.min(-0.001, air.y + climb * dt);
+    let nextY = Math.min(air.targetY - 0.001, air.y + climb * dt);
     if (
       air.y <= ceiling(other) + 1e-9 &&
       nextY > ceiling(other) &&
@@ -229,7 +243,9 @@ function advancePendulum(fighter, other, index, offset, direction) {
     const [low, high] = legalBounds(fighter, other, index);
     // Obstacles stop tangential motion while keeping the outlet on the rope's
     // circle. Clamping x and y separately would stretch or slacken visible silk.
-    const topAngle = Math.acos(clamp((centerY + 0.001) / length, 0, 1));
+    const topAngle = Math.acos(
+      clamp((centerY - air.targetY + 0.001) / length, 0, 1),
+    );
     angle = clamp(
       freeAngle,
       Math.max(-topAngle, Math.asin(clamp((low - centerX) / length, -1, 1))),
@@ -264,6 +280,7 @@ export function advanceAerial(fighter, other, index, action) {
   const air = fighter.air;
   if (isAttached(fighter)) return false;
   air.blocked = false;
+  air.blockReason = null;
   air.clearDirection = 0;
   fighter.velocity = 0;
   fighter.dashRemaining = 0;
@@ -273,19 +290,34 @@ export function advanceAerial(fighter, other, index, action) {
     ? Math.sign(action.direction)
     : 0;
   if (action.web && ["falling", "grounded"].includes(air.mode)) {
+    const target = silkTarget(
+      fighter.x + offset[0],
+      air.y + offset[1],
+      fighter.stage,
+    );
+    if (!target) return true;
     air.mode = "deploying";
     air.ticks = 0;
     // Silk is fired from the spinneret at the moment of the cast, so the anchor
     // sits above the current position rather than the earlier drop point. A
     // moving spider otherwise attaches to a rope angled behind it, which turns
     // most of its forward speed into radial tension and kills the swing.
-    air.anchorX = clampToTwig(fighter.x + offset[0], fighter.x, fighter.stage);
+    air.anchorX = clamp(fighter.x + offset[0], ...target.body);
+    air.targetY = target.y;
     air.anchorZ = offset[2];
     air.anchorY = stickSurfaceY(air.anchorX, air.anchorZ, fighter.stage);
     air.landingX = fighter.x;
   }
   if (air.mode === "deploying") {
-    air.anchorX = clampToTwig(fighter.x + offset[0], fighter.x, fighter.stage);
+    const target = silkTarget(
+      fighter.x + offset[0],
+      air.y + offset[1],
+      fighter.stage,
+    );
+    if (target) {
+      air.anchorX = clamp(fighter.x + offset[0], ...target.body);
+      air.targetY = target.y;
+    }
     air.anchorY = stickSurfaceY(air.anchorX, air.anchorZ, fighter.stage);
   }
   if (air.mode === "grounded") return true;
@@ -302,7 +334,7 @@ export function advanceAerial(fighter, other, index, action) {
     );
     // Quadratic fall matches the reel's vertical speed on the first grip tick,
     // so the winch decelerates into the twig instead of stopping dead.
-    air.y = air.startY * fall;
+    air.y = air.targetY + (air.startY - air.targetY) * fall;
     air.vx = 0;
     air.vy = 0;
     air.ropeLength = Math.hypot(
@@ -311,7 +343,7 @@ export function advanceAerial(fighter, other, index, action) {
     );
     if (t === 1) {
       const exitVx = air.exitVx;
-      fighter.air = createAir();
+      fighter.air = createAir(air.targetY);
       fighter.velocity = exitVx;
     }
     return true;
@@ -341,7 +373,10 @@ export function advanceAerial(fighter, other, index, action) {
     const x = fighter.x + air.vx * DT;
     fighter.x = legalX(fighter, other, index, x);
     if (fighter.x !== x) air.vx = 0;
-    air.y = Math.max(AIR.groundY, Math.min(-0.001, air.y + air.vy * DT));
+    air.y = Math.max(
+      AIR.groundY,
+      Math.min(air.releaseY - 0.001, air.y + air.vy * DT),
+    );
     if (air.y === AIR.groundY) {
       air.vy = 0;
       if (air.mode === "falling") {
@@ -368,7 +403,15 @@ export function advanceAerial(fighter, other, index, action) {
         clamp(Math.max(0, air.vy) / AIR.reelSpeed, 0, 1),
       );
     }
-  } else if (air.mode === "reeling" && air.y >= -0.28) {
+  } else if (air.mode === "reeling" && air.y >= air.targetY - 0.28) {
+    if (stickHeight(fighter.x, fighter.stage) !== air.targetY) {
+      // A low anchor cannot hoist a spider onto a higher twig. Keep steering
+      // available instead of interpolating a long jump back across the gap.
+      air.blocked = true;
+      air.blockReason = "height";
+      air.clearDirection = Math.sign(air.anchorX - fighter.x);
+      return true;
+    }
     air.mode = "reattaching";
     air.ticks = 0;
     air.startX = fighter.x;
@@ -387,6 +430,10 @@ export function advanceAerial(fighter, other, index, action) {
       fighter.x,
       fighter.stage,
     );
+    // A late drift can end over another rail. Keep the grip on the rail whose
+    // silk supports us; crossing to another height requires a fresh cast.
+    if (stickHeight(air.landingX, fighter.stage) !== air.targetY)
+      air.landingX = clampToStick(fighter.x, fighter.x, fighter.stage);
   }
   if (air.blocked) {
     const [low, high] = legalBounds(fighter, other, index);

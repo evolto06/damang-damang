@@ -48,6 +48,7 @@ const touchDevice = window.matchMedia(
   "(hover: none) and (pointer: coarse)",
 ).matches;
 const inputSources = [touchDevice ? "touch" : "keyboard", "keyboard"];
+const motionPreference = window.matchMedia("(prefers-reduced-motion: reduce)");
 const audio = createGameAudio();
 let hintsEnabled = true;
 try {
@@ -154,6 +155,7 @@ const runtime = createRuntime({
 const held = [new Set(), new Set()];
 const pointerDirections = new Map();
 const controller = createControllerInput();
+let connectedPads = 0;
 const controllerDirections = [0, 0];
 runtime.inputSources = inputSources;
 const cameraFocus = { x: 0, halfSpan: 6.3 };
@@ -161,11 +163,19 @@ let viewWidth = canvas.clientWidth,
   viewHeight = canvas.clientHeight,
   previousFrame = null;
 let markerTop = 180;
+let sceneDirty = true,
+  lastDrawWorld = null,
+  lastDrawTick = -1;
 let resultAt = null;
+const damageNumbers = [$("#player-damage"), $("#opponent-damage")];
+let observedHealth = [100, 100],
+  damageUntil = [0, 0],
+  shakeUntil = 0;
 const markers = [$("#player-marker"), $("#opponent-marker")].map((element) => ({
   element,
   name: element.firstElementChild,
   hint: element.lastElementChild,
+  height: 0,
 }));
 const markerPoint = new THREE.Vector3();
 const healthUI = ["player", "opponent"].map((prefix) => ({
@@ -199,9 +209,10 @@ new GLTFLoader().load(
     );
     clearInput();
     assetsReady = true;
+    sceneDirty = true;
     if (window.__damangBoot) window.__damangBoot.ready = true;
     startButton.disabled = false;
-    pvpButton.disabled = false;
+    pvpButton.disabled = touchDevice && connectedPads === 0;
     startStatus.textContent =
       "Ready when you are. Choose Bot Match or PvP to begin.";
     startStatus.dataset.state = "ready";
@@ -253,7 +264,12 @@ function applyMode(mode) {
 function startMatch(mode) {
   if (navigator.userActivation?.isActive) audio.unlock();
   controller.selectMode(mode);
-  if (!assetsReady || matchStarted) return;
+  if (
+    !assetsReady ||
+    matchStarted ||
+    (mode === "pvp" && touchDevice && connectedPads === 0)
+  )
+    return;
   matchStarted = true;
   runtime.mode = mode;
   restartRuntime(runtime, performance.now(), $("#stage-choice").value);
@@ -264,6 +280,8 @@ function startMatch(mode) {
   cameraFocus.halfSpan = 6.3;
   resultAt = null;
   audio.reset();
+  observedHealth = [100, 100];
+  damageUntil = [0, 0];
   bindings = BINDS[mode];
   applyMode(mode);
   clearInput();
@@ -372,6 +390,8 @@ function restart() {
     return;
   resultAt = null;
   audio.reset();
+  observedHealth = [100, 100];
+  damageUntil = [0, 0];
   clearInput();
   restartRuntime(runtime);
   $("#round-announcement").textContent = "";
@@ -505,6 +525,7 @@ document.addEventListener("visibilitychange", () => {
 });
 
 function resize() {
+  sceneDirty = true;
   const width = canvas.clientWidth,
     height = canvas.clientHeight;
   viewWidth = width;
@@ -513,6 +534,9 @@ function resize() {
     document.querySelector(".fighters").getBoundingClientRect().bottom -
     canvas.getBoundingClientRect().top +
     12;
+  markers.forEach((marker) => {
+    marker.height = 0;
+  });
   renderer.setSize(width, height, false);
   fitPlayCamera(camera, width, height, cameraFocus);
   silks.forEach((silk) => silk.setResolution(width, height));
@@ -537,19 +561,71 @@ function pollController(time) {
     ended: matchStarted && runtime.world.status === "ended",
     focused: document.hasFocus() && !document.hidden,
     mode: runtime.mode,
+    navigateUI: !matchStarted || !!dialog,
   });
+  const count = result.slots.filter((slot) => slot.connected).length;
+  if (count !== connectedPads) {
+    connectedPads = count;
+    controllerDirections.fill(0);
+    for (let index = 0; index < 2; index++) directionInput(index, time);
+    controller.reset();
+    result.actions = [];
+    result.directions = [];
+  }
+  const lonePadSlot = result.slots.findIndex((slot) => slot.connected);
+  const fighterSlot = (slot) =>
+    runtime.mode === "pvp" && count === 1 ? 1 : slot;
+  if (assetsReady) pvpButton.disabled = touchDevice && count === 0;
+  setText(
+    $("#pvp-note"),
+    touchDevice && count === 0
+      ? "PvP needs a keyboard or controller for P2"
+      : count === 1
+        ? "One pad plays P2 · Keyboard / touch plays P1"
+        : "Split keyboard · Optional controllers",
+  );
   const slots = result.slots
     .map((slot, index) =>
       matchStarted && runtime.mode === "bot" && index === 1
         ? "P2: AI (second controller idle)"
-        : `P${index + 1}: ${!slot.connected ? "keyboard available · optional pad" : !slot.armed ? "keyboard available · release pad buttons" : "keyboard + controller ready"}`,
+        : `P${fighterSlot(index) + 1}: ${!slot.connected ? "keyboard available" : !slot.armed ? "release pad buttons" : "controller ready"}`,
     )
+    .filter((_, index) => count !== 1 || index === lonePadSlot)
     .join(" · ");
   const status = !available
     ? "Controller access unavailable. Keyboard controls work in both modes; touch controls P1."
-    : `${slots}${result.unsupported ? " · Unrecognized layout: browser standard mapping required." : ""}${matchStarted ? " · Start / Options pauses or resumes." : " · D-pad ↑ Bot / ↓ PvP; bottom face confirms."}`;
+    : `${slots}${result.unsupported ? " · Unrecognized layout: browser standard mapping required." : ""}${count ? " · D-pad navigates menus; bottom face confirms." : " · Press any button on your controller to connect."}`;
   for (const element of controllerStatuses)
     if (element.textContent !== status) element.textContent = status;
+  if (result.navigation?.length) {
+    const container = dialog ? $("#overlay") : $("#start-screen");
+    const controls = [
+      ...container.querySelectorAll("button, select, input"),
+    ].filter((element) => !element.disabled && element.getClientRects().length);
+    for (const navigation of result.navigation) {
+      let active = controls.indexOf(document.activeElement);
+      if (active < 0) {
+        (dialog ? $("#resume") : startButton).focus();
+        active = controls.indexOf(document.activeElement);
+      }
+      if (navigation === "next" || navigation === "previous")
+        controls[
+          (active + (navigation === "next" ? 1 : controls.length - 1)) %
+            controls.length
+        ]?.focus();
+      else if (
+        document.activeElement instanceof HTMLSelectElement &&
+        ["left", "right", "confirm"].includes(navigation)
+      ) {
+        const select = document.activeElement;
+        select.selectedIndex =
+          (select.selectedIndex +
+            (navigation === "left" ? select.options.length - 1 : 1)) %
+          select.options.length;
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+      } else if (navigation === "confirm") document.activeElement?.click();
+    }
+  }
   if (!matchStarted) {
     setAttribute(startButton, "aria-pressed", result.selectedMode === "bot");
     setAttribute(pvpButton, "aria-pressed", result.selectedMode === "pvp");
@@ -561,13 +637,15 @@ function pollController(time) {
     return;
   }
   for (const direction of result.directions) {
-    if (direction.value) inputSources[direction.fighter] = "controller";
-    controllerDirections[direction.fighter] = direction.value;
-    directionInput(direction.fighter, direction.at);
+    const fighter = fighterSlot(direction.fighter);
+    if (direction.value) inputSources[fighter] = "controller";
+    controllerDirections[fighter] = direction.value;
+    directionInput(fighter, direction.at);
   }
   for (const action of result.actions) {
-    inputSources[action.fighter] = "controller";
-    queueAction(runtime, action.fighter, action.kind, action.at);
+    const fighter = fighterSlot(action.fighter);
+    inputSources[fighter] = "controller";
+    queueAction(runtime, fighter, action.kind, action.at);
   }
 }
 
@@ -600,13 +678,23 @@ renderer.setAnimationLoop((time) => {
   const delta =
     previousFrame === null ? 0 : Math.min(0.1, (time - previousFrame) / 1000);
   previousFrame = time;
-  followCameraFocus(
-    cameraFocus,
-    shown.map((item) => item.fighter),
-    world.stage,
-    delta,
-  );
+  if (matchStarted && !runtime.paused && world.status === "playing") {
+    followCameraFocus(
+      cameraFocus,
+      shown.map((item) => item.fighter),
+      world.stage,
+      delta,
+    );
+  }
   fitPlayCamera(camera, viewWidth, viewHeight, cameraFocus);
+  // A brief, bounded shake follows damage without changing camera tracking.
+  const reducedMotion = motionPreference.matches;
+  if (!reducedMotion && time < shakeUntil && !runtime.paused) {
+    const offset = (Math.sin(time * 0.12) * 0.035 * (shakeUntil - time)) / 180;
+    camera.left += offset;
+    camera.right += offset;
+    camera.updateProjectionMatrix();
+  }
   const feedback = fightFeedback(runtime);
   setText($("#fight-prompt"), feedback.prompt);
   setText(
@@ -615,6 +703,15 @@ renderer.setAnimationLoop((time) => {
   );
   for (const [index, fighter] of world.fighters.entries()) {
     const ui = healthUI[index];
+    if (fighter.hp < observedHealth[index]) {
+      setText(damageNumbers[index], `−${observedHealth[index] - fighter.hp}`);
+      damageUntil[index] = time + 850;
+      shakeUntil = time + 180;
+      ui.health.classList.remove("health-hit");
+      void ui.health.offsetWidth;
+      ui.health.classList.add("health-hit");
+    }
+    observedHealth[index] = fighter.hp;
     setText(ui.hp, `${fighter.hp} / ${COMBAT.maxHealth}`);
     setAttribute(ui.health, "aria-valuenow", fighter.hp);
     setStyle(ui.fill, "width", `${fighter.hp}%`);
@@ -678,40 +775,65 @@ renderer.setAnimationLoop((time) => {
   }
   heldStickRoot.updateMatrixWorld(true);
   const close = Math.abs(shown[0].x - shown[1].x) < 2.8;
-  let firstMarkerY = 0;
   for (const [index, marker] of markers.entries()) {
     marker.element.hidden = !matchStarted || !!dialog;
     if (marker.element.dataset.input !== inputSources[index])
       marker.element.dataset.input = inputSources[index];
-    setText(
-      marker.hint,
-      chosenHints[index].map((hint) => hint.text).join(" · "),
+    const hintText = chosenHints[index].map((hint) => hint.text).join(" · ");
+    if (marker.hint.textContent !== hintText) {
+      setText(marker.hint, hintText);
+      marker.height = 0;
+    }
+    markerPoint.set(
+      shown[index].x,
+      Math.max(shown[index].fighter.air.y + 0.5, 0.48),
+      0,
     );
-    markerPoint.set(shown[index].x, 0.48, 0);
     heldStickRoot.localToWorld(markerPoint);
     markerPoint.project(camera);
     const x = Math.max(
-      70,
-      Math.min(viewWidth - 70, ((markerPoint.x + 1) * viewWidth) / 2),
+      94,
+      Math.min(
+        viewWidth - 94,
+        ((markerPoint.x + 1) * viewWidth) / 2 +
+          (close ? (index === 0 ? -100 : 100) : 0),
+      ),
     );
-    const labelHeight = marker.element.offsetHeight;
-    // Keep both labels below the HUD; close fighters use distinct rows even at the clamp.
-    const y =
-      close && index === 1
-        ? firstMarkerY + labelHeight + 8
-        : Math.max(
-            markerTop + labelHeight,
-            ((1 - markerPoint.y) * viewHeight) / 2,
-          );
-    if (index === 0) firstMarkerY = y;
+    const labelHeight =
+      marker.height || (marker.height = marker.element.offsetHeight);
+    // Separate close fighters horizontally, so neither label moves down across
+    // the twig or the fighting silhouette on a short screen.
+    const y = Math.max(
+      markerTop + labelHeight,
+      ((1 - markerPoint.y) * viewHeight) / 2,
+    );
     setStyle(
       marker.element,
       "transform",
       `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%, -100%)`,
     );
+    damageNumbers[index].hidden =
+      !matchStarted || !!dialog || time >= damageUntil[index];
+    setStyle(
+      damageNumbers[index],
+      "transform",
+      `translate(${x.toFixed(1)}px, ${(y + 40 - (850 - (damageUntil[index] - time)) * 0.035).toFixed(1)}px)`,
+    );
   }
   audio.update(world, { paused: runtime.paused || !matchStarted });
-  renderer.render(scene, camera);
+  // Menus and pauses still poll controls, but their frozen scene needs no
+  // continuous GPU work. Loading, resizing, restarting and new ticks redraw it.
+  if (
+    sceneDirty ||
+    world !== lastDrawWorld ||
+    world.tick !== lastDrawTick ||
+    (matchStarted && !runtime.paused && world.status === "playing")
+  ) {
+    renderer.render(scene, camera);
+    sceneDirty = false;
+    lastDrawWorld = world;
+    lastDrawTick = world.tick;
+  }
 });
 if (import.meta.env.DEV)
   window.__spiderDerby = {
@@ -730,5 +852,14 @@ if (import.meta.env.DEV)
       rigs: rigs.map(inspectRig),
       drawCalls: renderer.info.render.calls,
       triangles: renderer.info.render.triangles,
+      fighterScreens: rigs.map((rig) => {
+        const bounds = new THREE.Box3().setFromObject(rig.root, true);
+        const top = new THREE.Vector3(
+          bounds.getCenter(new THREE.Vector3()).x,
+          bounds.max.y,
+          0,
+        ).project(camera);
+        return { top: ((1 - top.y) * viewHeight) / 2 };
+      }),
     }),
   };

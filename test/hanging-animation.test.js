@@ -184,7 +184,7 @@ test("reattachment eases each leg and palp back to the unchanged attached rig", 
   );
 });
 
-test("released and retrieving spiders keep dorsal bodies down and ventral feet up in both headings", () => {
+test("detached spiders turn upright and restore inversion near the twig in both headings", () => {
   for (const forward of [1, -1]) {
     const fighter = createWorld().fighters[0],
       rig = createSpiderRig(source, 0);
@@ -205,7 +205,7 @@ test("released and retrieving spiders keep dorsal bodies down and ventral feet u
         vy: AIR.reelSpeed,
         anchorY: -0.07,
       });
-      for (let age = 10; age < 100; age += 7) {
+      for (let age = 24; age < 100; age += 7) {
         fighter.air.animationTicks = age;
         if (mode !== "reattaching") fighter.air.ticks = age;
         rig.update(fighter.x, fighter);
@@ -213,16 +213,13 @@ test("released and retrieving spiders keep dorsal bodies down and ventral feet u
         const dorsal = new THREE.Vector3(0, 1, 0).transformDirection(
           rig.inverted.matrixWorld,
         );
-        assert.ok(dorsal.y < -0.9, `${mode}: abdomen remains inverted`);
+        assert.ok(dorsal.y > 0.9, `${mode}: abdomen faces upright`);
         for (const leg of rig.legs) {
           const hip = leg.hip.clone().applyMatrix4(rig.inverted.matrixWorld);
           const toe = leg.contact
             .clone()
             .applyMatrix4(rig.inverted.matrixWorld);
-          assert.ok(
-            toe.y > hip.y,
-            `${mode} ${leg.name}: foot stays on the upper ventral side`,
-          );
+          assert.ok(toe.y < hip.y, `${mode} ${leg.name}: feet face the ground`);
         }
       }
     }

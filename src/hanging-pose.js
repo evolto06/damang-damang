@@ -10,7 +10,15 @@ const smooth = (value) => {
 export function hangingPose(fighter, forward = fighter?.forward ?? 1) {
   const air = fighter?.air;
   if (!air || air.mode === "attached")
-    return { blend: 0, pitch: 0, phase: 0, motion: 0, climb: 0, drift: 0 };
+    return {
+      blend: 0,
+      upright: 0,
+      pitch: 0,
+      phase: 0,
+      motion: 0,
+      climb: 0,
+      drift: 0,
+    };
   const age = air.animationTicks ?? air.ticks;
   const blend =
     air.mode === "reattaching"
@@ -47,5 +55,14 @@ export function hangingPose(fighter, forward = fighter?.forward ?? 1) {
     air.mode === "reeling" && !air.blocked
       ? smooth(air.ticks / 10) * clamp(air.vy / AIR.reelSpeed, 0, 1)
       : 0;
-  return { blend, pitch, phase, motion, climb, drift };
+  const retrieving = [
+    "deploying",
+    "swinging",
+    "reeling",
+    "reattaching",
+  ].includes(air.mode);
+  const upright =
+    smooth(age / 18) *
+    (retrieving ? smooth(((air.targetY ?? 0) - air.y - 0.3) / 0.9) : 1);
+  return { blend, upright, pitch, phase, motion, climb, drift };
 }

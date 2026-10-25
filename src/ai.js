@@ -114,7 +114,7 @@ export function decideAI(ai, world) {
   const gap = clearGap(world),
     inRange = gap <= COMBAT.reach - AI_RULES.rangeMargin;
   if (
-    player.phase === "windup" &&
+    ["windup", "lungewindup"].includes(player.phase) &&
     gap < 0.75 &&
     player.attackId !== ai.seenWindup
   ) {
@@ -130,11 +130,23 @@ export function decideAI(ai, world) {
     ai.state = "dodge";
     return { ...action, direction: -toward, dash };
   }
-  if (player.phase === "recovery" && inRange) {
+  if (["recovery", "lungerecovery"].includes(player.phase) && inRange) {
     ai.state = "committed";
     return { ...action, bite: true };
   }
   if (world.tick < ai.readyAt) return action;
+  if (
+    gap > 0.45 &&
+    gap < 1.65 &&
+    me.webCooldown === 0 &&
+    world.tick >= (ai.nextTacticAt ?? 0)
+  ) {
+    ai.nextTacticAt = world.tick + 30;
+    if (random(ai) < 0.4) {
+      ai.state = "committed";
+      return { ...action, shoot: true };
+    }
+  }
   if (inRange) {
     action.bite = true;
     ai.state = "committed";

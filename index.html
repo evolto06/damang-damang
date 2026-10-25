@@ -8,65 +8,406 @@
   </head>
   <body>
     <main id="game" class="at-menu" aria-label="Damang Damang">
-      <canvas id="scene" tabindex="-1" aria-hidden="true" aria-label="Two spiders hanging beneath a thin stick held by a person on a barangay street"></canvas>
+      <canvas
+        id="scene"
+        tabindex="-1"
+        aria-hidden="true"
+        aria-label="Two spiders hanging beneath a thin stick held by a person on a barangay street"
+      ></canvas>
       <div class="vignette" aria-hidden="true"></div>
-      <section id="start-screen" class="start-screen" aria-labelledby="start-title">
+      <section
+        id="start-screen"
+        class="start-screen"
+        aria-labelledby="start-title"
+      >
         <div class="start-shell">
           <div class="start-intro">
-            <span class="start-eyebrow"><i aria-hidden="true"></i> Laro sa kanto · Klasikong Pinoy</span>
-            <h1 id="start-title">Damang<br><span>Damang.</span></h1>
-            <p class="start-tagalog" lang="fil">Maliit na gagamba. Malaking laban.</p>
-            <p class="start-description">Magkita sa patpat. Ihanda ang sapot, lapitang mabuti, at kagatin ang kalaban.</p>
-            <span class="start-location"><span aria-hidden="true">↗</span> Laban sa Barangay</span>
+            <span class="start-eyebrow"
+              ><i aria-hidden="true"></i> Laro sa kanto · Klasikong Pinoy</span
+            >
+            <h1 id="start-title">Damang<br /><span>Damang.</span></h1>
+            <p class="start-tagalog" lang="fil">
+              Maliit na gagamba. Malaking laban.
+            </p>
+            <p class="start-description">
+              Magkita sa patpat. Ihanda ang sapot, lapitang mabuti, at kagatin
+              ang kalaban.
+            </p>
+            <span class="start-location"
+              ><span aria-hidden="true">↗</span> Laban sa Barangay</span
+            >
           </div>
           <div class="start-modes">
-            <label class="stage-choice" for="stage-choice">Arena <select id="stage-choice"><option value="single">Barangay · one stick</option><option value="twin">Crossing · two sticks</option></select></label>
-            <div class="mode-heading"><span class="start-eyebrow">Choose your match</span><span class="round-pill">Single round</span></div>
-            <button id="start-bot" class="mode-card bot-card" disabled aria-describedby="start-status">
+            <label class="stage-choice" for="stage-choice"
+              >Arena
+              <select id="stage-choice">
+                <option value="single">Barangay · one stick</option>
+                <option value="twin">Crossing · two sticks</option>
+                <option value="terraces">Terraces / raised sticks</option>
+              </select></label
+            >
+            <div class="mode-heading">
+              <span class="start-eyebrow">Choose your match</span
+              ><span class="round-pill">Single round</span>
+            </div>
+            <button
+              id="start-bot"
+              class="mode-card bot-card"
+              disabled
+              aria-describedby="start-status"
+            >
               <span class="mode-number" aria-hidden="true">01</span>
-              <span class="mode-copy"><strong>Bot Match</strong><span>You vs. the barangay challenger</span><small>One player · Play locally</small></span>
+              <span class="mode-copy"
+                ><strong>Bot Match</strong
+                ><span>You vs. the barangay challenger</span
+                ><small>One player · Play locally</small></span
+              >
               <span class="mode-arrow" aria-hidden="true">↗</span>
             </button>
-            <button id="start-pvp" class="mode-card pvp-card" disabled aria-describedby="pvp-note">
+            <button
+              id="start-pvp"
+              class="mode-card pvp-card"
+              disabled
+              aria-describedby="pvp-note"
+            >
               <span class="mode-number" aria-hidden="true">02</span>
-              <span class="mode-copy"><strong>PvP</strong><span>P1 vs. P2</span><small id="pvp-note">Split keyboard · Optional controllers</small></span>
+              <span class="mode-copy"
+                ><strong>PvP</strong><span>P1 vs. P2</span
+                ><small id="pvp-note"
+                  >Split keyboard · Optional controllers</small
+                ></span
+              >
               <span class="mode-arrow" aria-hidden="true">↗</span>
             </button>
-            <p id="start-status" class="start-status" role="status" aria-live="polite">Preparing the spiders…</p>
-            <button id="start-retry" class="start-retry" hidden>Reload game</button>
-            <div class="start-tips" aria-label="How to play"><span><b>01 / Move</b> A / D or arrows</span><span><b>02 / Stun</b> Shoot a web</span><span><b>03 / Bite</b> Close range</span></div>
-            <p class="start-touch">Touch controls play P1. For PvP, P2 needs a keyboard or a second controller; connect one before choosing PvP.</p>
-            <p class="controller-help">Controller · D-pad ← / → move · ↓ drop<br>Face buttons by position: left = bite · top = shoot web · bottom = lunge · right = web return. Start / Options pauses. Menu: D-pad ↑ Bot / ↓ PvP; bottom confirms.</p>
-            <p class="controller-help">Xbox, PlayStation and Switch controllers work when the browser provides a standard mapping. Other layouts need browser remapping. Keyboard works in both modes; controllers are optional. First pad joins P1, next joins P2. Release buttons before joining. Disconnecting keeps keyboard controls available.</p>
-            <p class="controller-status" data-controller-status role="status">Keyboard ready. Optionally connect a controller, then press and release a button.</p>
+            <p
+              id="start-status"
+              class="start-status"
+              role="status"
+              aria-live="polite"
+            >
+              Preparing the spiders…
+            </p>
+            <button id="start-retry" class="start-retry" hidden>
+              Reload game
+            </button>
+            <div class="start-tips" aria-label="How to play">
+              <span><b>01 / Move</b> A / D or arrows</span
+              ><span><b>02 / Stun</b> Shoot a web</span
+              ><span><b>03 / Bite</b> Close range</span>
+            </div>
+            <p class="start-touch">
+              Touch controls play P1. For PvP, P2 needs a keyboard or
+              controller. On phones, connect a controller to enable PvP.
+            </p>
+            <p class="controller-help">
+              Controller · D-pad ← / → move · ↓ drop<br />Face buttons by
+              position: left = bite · top = shoot web · bottom = lunge · right =
+              web return. Start / Options pauses. Menu: D-pad navigates menus;
+              bottom confirms. Left / right changes the arena.
+            </p>
+            <p class="controller-help">
+              Xbox, PlayStation and Switch controllers work when the browser
+              provides a standard mapping. Other layouts need browser remapping.
+              Keyboard works in both modes; controllers are optional. In PvP,
+              one pad plays P2; two pads play P1 and P2. Release buttons before
+              joining. Disconnecting keeps keyboard controls available.
+            </p>
+            <p class="controller-status" data-controller-status role="status">
+              Keyboard ready. Optionally connect a controller, then press and
+              release a button.
+            </p>
           </div>
-          <footer class="start-footer"><span>Larong Pinoy. Bagong labanan.</span><span>Walong paa, pusong kampeon.</span></footer>
+          <footer class="start-footer">
+            <span>Larong Pinoy. Bagong labanan.</span
+            ><span>Walong paa, pusong kampeon.</span>
+          </footer>
         </div>
       </section>
       <div id="match-ui" inert aria-hidden="true">
-      <header class="topbar">
-        <div class="identity"><span class="mark" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><path d="M7 5 13 12M3 13 12 16M3 23 12 20M8 29 14 23M25 5 19 12M29 13 20 16M29 23 20 20M24 29 18 23" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><ellipse cx="16" cy="18" rx="5" ry="7" fill="currentColor"/><circle cx="16" cy="9" r="3" fill="currentColor"/></svg></span><div><h1>Damang Damang</h1><span class="subtitle" lang="fil">Laban sa Barangay</span></div></div>
-        <span class="session"><span id="stage-name">Barangay</span> · <time id="round-time" aria-label="Round time remaining">60</time>s</span>
-        <button id="pause" class="icon-button" aria-label="Pause game" title="Pause (Esc)"><svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><rect x="7" y="5" width="3" height="14" rx="1"/><rect x="14" y="5" width="3" height="14" rx="1"/></svg></button>
-      </header>
-      <section class="fighters" aria-label="Fighters">
-        <div class="fighter player"><div class="fighter-title"><span class="fighter-dot" aria-hidden="true"></span><h2 id="player-name" lang="fil">Ikaw</h2><span id="player-detail" class="fighter-detail">You</span><span id="player-phase" class="phase-label">Loading</span></div><div class="health-row"><div id="player-health" class="health-bar" role="progressbar" aria-label="Your health" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100"><i></i></div><span id="player-hp">100 / 100</span></div></div>
-        <span class="versus" aria-hidden="true">/</span>
-        <div class="fighter opponent"><div class="fighter-title"><span class="fighter-dot" aria-hidden="true"></span><h2 id="opponent-name" lang="fil">Kalaban</h2><span id="opponent-detail" class="fighter-detail">AI</span><span id="opponent-phase" class="phase-label">Loading</span></div><div class="health-row"><div id="opponent-health" class="health-bar" role="progressbar" aria-label="Opponent health" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100"><i></i></div><span id="opponent-hp">100 / 100</span></div></div>
-      </section>
-      <div id="world-labels" aria-hidden="true"><div id="player-marker" class="world-label player-marker"><b>Ikaw</b><span></span></div><div id="opponent-marker" class="world-label opponent-marker"><b>Kalaban</b><span></span></div></div>
-      <p class="rotate-hint">Rotate your phone for a closer view ↻</p>
-      <div id="asset-status" class="asset-status" role="status">Preparing the spiders…</div>
+        <header class="topbar">
+          <div class="identity">
+            <span class="mark" aria-hidden="true"
+              ><svg viewBox="0 0 32 32" fill="none">
+                <path
+                  d="M7 5 13 12M3 13 12 16M3 23 12 20M8 29 14 23M25 5 19 12M29 13 20 16M29 23 20 20M24 29 18 23"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                />
+                <ellipse cx="16" cy="18" rx="5" ry="7" fill="currentColor" />
+                <circle cx="16" cy="9" r="3" fill="currentColor" /></svg
+            ></span>
+            <div>
+              <h1>Damang Damang</h1>
+              <span class="subtitle" lang="fil">Laban sa Barangay</span>
+            </div>
+          </div>
+          <span class="session"
+            ><span id="stage-name">Barangay</span> ·
+            <time id="round-time" aria-label="Round time remaining">60</time
+            >s</span
+          >
+          <button
+            id="pause"
+            class="icon-button"
+            aria-label="Pause game"
+            title="Pause (Esc)"
+          >
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor">
+              <rect x="7" y="5" width="3" height="14" rx="1" />
+              <rect x="14" y="5" width="3" height="14" rx="1" />
+            </svg>
+          </button>
+        </header>
+        <section class="fighters" aria-label="Fighters">
+          <div class="fighter player">
+            <div class="fighter-title">
+              <span class="fighter-dot" aria-hidden="true"></span>
+              <h2 id="player-name" lang="fil">Ikaw</h2>
+              <span id="player-detail" class="fighter-detail">You</span
+              ><span id="player-phase" class="phase-label">Loading</span>
+            </div>
+            <div class="health-row">
+              <div
+                id="player-health"
+                class="health-bar"
+                role="progressbar"
+                aria-label="Your health"
+                aria-valuemin="0"
+                aria-valuemax="100"
+                aria-valuenow="100"
+              >
+                <i></i>
+              </div>
+              <span id="player-hp">100 / 100</span>
+            </div>
+          </div>
+          <span class="versus" aria-hidden="true">/</span>
+          <div class="fighter opponent">
+            <div class="fighter-title">
+              <span class="fighter-dot" aria-hidden="true"></span>
+              <h2 id="opponent-name" lang="fil">Kalaban</h2>
+              <span id="opponent-detail" class="fighter-detail">AI</span
+              ><span id="opponent-phase" class="phase-label">Loading</span>
+            </div>
+            <div class="health-row">
+              <div
+                id="opponent-health"
+                class="health-bar"
+                role="progressbar"
+                aria-label="Opponent health"
+                aria-valuemin="0"
+                aria-valuemax="100"
+                aria-valuenow="100"
+              >
+                <i></i>
+              </div>
+              <span id="opponent-hp">100 / 100</span>
+            </div>
+          </div>
+        </section>
+        <span
+          id="player-damage"
+          class="damage-number"
+          aria-hidden="true"
+          hidden
+        ></span
+        ><span
+          id="opponent-damage"
+          class="damage-number"
+          aria-hidden="true"
+          hidden
+        ></span>
+        <div id="world-labels" aria-hidden="true">
+          <div id="player-marker" class="world-label player-marker">
+            <b>Ikaw</b><span></span>
+          </div>
+          <div id="opponent-marker" class="world-label opponent-marker">
+            <b>Kalaban</b><span></span>
+          </div>
+        </div>
+        <p class="rotate-hint">Rotate your phone for a closer view ↻</p>
+        <div id="asset-status" class="asset-status" role="status">
+          Preparing the spiders…
+        </div>
 
-      <footer class="bottom-bar" aria-label="Fight controls">
-        <div class="movement-controls"><span class="control-caption">Move <span id="move-hint" class="keyboard-hint">A / D · ← / →</span></span><div class="keys"><button class="key" data-direction="-1" aria-label="Move left"><span aria-hidden="true">←</span><small>A</small></button><button class="key" data-direction="1" aria-label="Move right"><span aria-hidden="true">→</span><small>D</small></button></div></div>
-        <div class="action-buttons"><button id="shoot" aria-describedby="fight-prompt" class="shoot-button" aria-label="Shoot a web to briefly stun the opponent. K" disabled><span><strong>Shoot web</strong><small id="shoot-status">K · STUN</small></span></button><button id="bite" aria-describedby="fight-prompt" class="bite-button" aria-label="Bite. J" disabled><span class="bite-icon" aria-hidden="true">⋏</span><span><strong>Bite</strong><small id="bite-status">J</small></span></button><button id="dash" aria-describedby="fight-prompt" class="dash-button" aria-label="Lunge. Shift or Space" disabled><span class="dash-icon" aria-hidden="true">↠</span><span><strong>Lunge</strong><small id="dash-status">SHIFT / SPACE</small></span><span class="cooldown-track" aria-hidden="true"><i id="cooldown"></i></span></button></div>
-        <div class="aerial-buttons"><button id="drop" aria-describedby="fight-prompt" aria-label="Drop from the stick. Down arrow or S" disabled><strong>Drop</strong><small id="drop-status">↓ / S</small></button><button id="web" aria-describedby="fight-prompt" aria-label="Shoot silk and return to the stick. C" disabled><strong>Web</strong><small id="web-status">C</small></button></div>
-        <div class="utility-controls"><button id="reset" aria-label="Restart fight"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10a8 8 0 1 1 1 8M4 4v6h6"/></svg><span>Restart</span><kbd>R</kbd></button><button id="help" aria-label="Controls"><span class="help-icon" aria-hidden="true">?</span><span>Controls</span></button></div>
-      </footer>
-      <p id="fight-prompt" class="build-label" role="status" aria-live="polite" aria-atomic="true">Preparing the spiders · Controls unlock when loading finishes.</p>
-      <p id="round-announcement" class="sr-only" aria-live="polite" aria-atomic="true"></p>
-      <div id="overlay" class="overlay" hidden><div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title" aria-describedby="dialog-copy"><span class="eyebrow" lang="fil">Laban sa Barangay</span><h2 id="dialog-title">Fight paused.</h2><p id="dialog-copy">Take a moment. Resume when you’re ready.</p><div id="help-grid" class="help-grid"><kbd>A / ←</kbd><span>Move left along the stick</span><kbd>D / →</kbd><span>Move right along the stick</span><kbd>K</kbd><span>Shoot a web: brief stun, then close in and bite</span><kbd>J</kbd><span>Bite: commit to a short windup</span><kbd>Shift / Space</kbd><span>Lunge without dealing damage</span><kbd>↓ / S</kbd><span>Drop from the stick</span><kbd>C</kbd><span>Cast silk once, swing and climb back</span><kbd>R</kbd><span>Restart the fight</span><kbd>Esc</kbd><span>Pause or resume</span></div><div id="pvp-help" class="help-grid" hidden><kbd>P1</kbd><span>A / D move · Q bite · E web shot · W web return · F lunge · S drop</span><kbd>P2</kbd><span>← / → move · , bite · . web shot · ↑ web return · / lunge · ↓ drop</span></div><p id="dialog-footnote" class="dialog-footnote">K shoots a stunning web on the stick. Once it hits, use J at close range to bite during the brief stun. Web shots have a cooldown. Bite and lunge work on the stick. Press C once after dropping to cast silk and return; the opponent waits. Return quickly: the round ends after 60 seconds. A / D can steer in the air.</p><p class="controller-help">Controller · D-pad ← / → move · ↓ drop · Left face: bite · Top face: shoot web · Bottom face: lunge · Right face: web return · Start / Options: pause or resume. Bottom face restarts a finished round. Same controls for P1 and P2; browser standard mapping required. Keyboard stays available. New pads join vacant P1 / P2 slots after a neutral release.</p><p class="controller-status" data-controller-status role="status"></p><label class="hint-toggle"><input id="button-hints" type="checkbox" checked> Button hints</label><button id="mute" class="dialog-restart" aria-pressed="false">Mute sound</button><button id="resume" class="resume" aria-label="Resume game">Tuloy / Resume →</button><button id="dialog-restart" class="dialog-restart">Restart fight</button><button id="change-mode" class="dialog-restart">Change mode / arena</button></div></div>
+        <footer class="bottom-bar" aria-label="Fight controls">
+          <div class="movement-controls">
+            <span class="control-caption"
+              >Move
+              <span id="move-hint" class="keyboard-hint"
+                >A / D · ← / →</span
+              ></span
+            >
+            <div class="keys">
+              <button class="key" data-direction="-1" aria-label="Move left">
+                <span aria-hidden="true">←</span><small>A</small></button
+              ><button class="key" data-direction="1" aria-label="Move right">
+                <span aria-hidden="true">→</span><small>D</small>
+              </button>
+            </div>
+          </div>
+          <div class="action-buttons">
+            <button
+              id="shoot"
+              aria-describedby="fight-prompt"
+              class="shoot-button"
+              aria-label="Shoot a web to briefly stun the opponent. K"
+              disabled
+            >
+              <span
+                ><strong>Shoot web</strong
+                ><small id="shoot-status">K · STUN</small></span
+              ></button
+            ><button
+              id="bite"
+              aria-describedby="fight-prompt"
+              class="bite-button"
+              aria-label="Bite. J"
+              disabled
+            >
+              <span class="bite-icon" aria-hidden="true">⋏</span
+              ><span
+                ><strong>Bite</strong><small id="bite-status">J</small></span
+              ></button
+            ><button
+              id="dash"
+              aria-describedby="fight-prompt"
+              class="dash-button"
+              aria-label="Lunge. Shift or Space"
+              disabled
+            >
+              <span class="dash-icon" aria-hidden="true">↠</span
+              ><span
+                ><strong>Lunge</strong
+                ><small id="dash-status">SHIFT / SPACE</small></span
+              ><span class="cooldown-track" aria-hidden="true"
+                ><i id="cooldown"></i
+              ></span>
+            </button>
+          </div>
+          <div class="aerial-buttons">
+            <button
+              id="drop"
+              aria-describedby="fight-prompt"
+              aria-label="Drop from the stick. Down arrow or S"
+              disabled
+            >
+              <strong>Drop</strong><small id="drop-status">↓ / S</small></button
+            ><button
+              id="web"
+              aria-describedby="fight-prompt"
+              aria-label="Shoot silk and return to the stick. C"
+              disabled
+            >
+              <strong>Web</strong><small id="web-status">C</small>
+            </button>
+          </div>
+          <div class="utility-controls">
+            <button id="reset" aria-label="Restart fight">
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M4 10a8 8 0 1 1 1 8M4 4v6h6" /></svg
+              ><span>Restart</span><kbd>R</kbd></button
+            ><button id="help" aria-label="Controls">
+              <span class="help-icon" aria-hidden="true">?</span
+              ><span>Controls</span>
+            </button>
+          </div>
+        </footer>
+        <p
+          id="fight-prompt"
+          class="build-label"
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          Preparing the spiders · Controls unlock when loading finishes.
+        </p>
+        <p
+          id="round-announcement"
+          class="sr-only"
+          aria-live="polite"
+          aria-atomic="true"
+        ></p>
+        <div id="overlay" class="overlay" hidden>
+          <div
+            class="dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="dialog-title"
+            aria-describedby="dialog-copy"
+          >
+            <span class="eyebrow" lang="fil">Laban sa Barangay</span>
+            <h2 id="dialog-title">Fight paused.</h2>
+            <p id="dialog-copy">Take a moment. Resume when you’re ready.</p>
+            <div id="help-grid" class="help-grid">
+              <kbd>A / ←</kbd><span>Move left along the stick</span
+              ><kbd>D / →</kbd><span>Move right along the stick</span
+              ><kbd>K</kbd
+              ><span>Shoot a web: brief stun, then close in and bite</span
+              ><kbd>J</kbd><span>Bite: commit to a short windup</span
+              ><kbd>Shift / Space</kbd
+              ><span>Lunge: windup, 30 damage, exposed recovery</span
+              ><kbd>↓ / S</kbd><span>Drop from the stick</span><kbd>C</kbd
+              ><span>Cast silk once, swing and climb back</span><kbd>R</kbd
+              ><span>Restart the fight</span><kbd>Esc</kbd
+              ><span>Pause or resume</span>
+            </div>
+            <div id="pvp-help" class="help-grid" hidden>
+              <kbd>P1</kbd
+              ><span
+                >A / D move · Q bite · E web shot · W web return · F lunge · S
+                drop</span
+              ><kbd>P2</kbd
+              ><span
+                >← / → move · , bite · . web shot · ↑ web return · / lunge · ↓
+                drop</span
+              >
+            </div>
+            <p id="dialog-footnote" class="dialog-footnote">
+              K shoots a stunning web on the stick. Once it hits, use J at close
+              range to bite during the brief stun. Web shots have a cooldown.
+              Bite and lunge work on the stick. Press C once after dropping to
+              cast silk and return; the opponent waits. Pavement deals 10 impact
+              damage, then 5 each second. Return quickly: the round ends after
+              60 seconds. A / D can steer in the air.
+            </p>
+            <p class="controller-help">
+              Controller · D-pad ← / → move · ↓ drop · Left face: bite · Top
+              face: shoot web · Bottom face: lunge · Right face: web return ·
+              Start / Options: pause or resume. Bottom face restarts a finished
+              round. Same controls for P1 and P2; browser standard mapping
+              required. Keyboard stays available. One pad plays P2 in PvP; two
+              pads play P1 and P2. Release controls after joining. Left stick
+              also moves; Back / Share restarts.
+            </p>
+            <p
+              class="controller-status"
+              data-controller-status
+              role="status"
+            ></p>
+            <label class="hint-toggle"
+              ><input id="button-hints" type="checkbox" checked /> Button
+              hints</label
+            ><button id="mute" class="dialog-restart" aria-pressed="false">
+              Mute sound</button
+            ><button id="resume" class="resume" aria-label="Resume game">
+              Tuloy / Resume →</button
+            ><button id="dialog-restart" class="dialog-restart">
+              Restart fight</button
+            ><button id="change-mode" class="dialog-restart">
+              Change mode / arena
+            </button>
+          </div>
+        </div>
       </div>
     </main>
     <script>
@@ -74,11 +415,16 @@
       window.__damangBoot = { ready: false, failed: false };
       window.setTimeout(function () {
         if (window.__damangBoot.ready || window.__damangBoot.failed) return;
-        document.getElementById('start-status').textContent = 'The game is taking too long to load. Check your connection and reload.';
-        document.getElementById('start-status').dataset.state = 'error';
-        document.getElementById('start-retry').hidden = false;
+        document.getElementById("start-status").textContent =
+          "The game is taking too long to load. Check your connection and reload.";
+        document.getElementById("start-status").dataset.state = "error";
+        document.getElementById("start-retry").hidden = false;
       }, 15000);
-      document.getElementById('start-retry').addEventListener('click', function () { window.location.reload(); });
+      document
+        .getElementById("start-retry")
+        .addEventListener("click", function () {
+          window.location.reload();
+        });
     </script>
     <script type="module" src="/src/main.js"></script>
   </body>

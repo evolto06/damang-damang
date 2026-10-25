@@ -96,10 +96,7 @@ test("reversed attached order blocks walking/dashing through contact; idle dash 
   world.fighters[0].x = 1;
   world.fighters[1].x = -1;
   for (let i = 0; i < 180; i++)
-    stepWorld(world, [
-      { direction: -1, dash: true },
-      { direction: 1, dash: true },
-    ]);
+    stepWorld(world, [{ direction: -1 }, { direction: 1 }]);
   assert.ok(
     world.fighters[0].x - world.fighters[1].x >= RULES.separation - 1e-9,
   );
@@ -112,6 +109,7 @@ test("reversed attached order blocks walking/dashing through contact; idle dash 
   separate.fighters[0].x = 2;
   separate.fighters[1].x = -2;
   stepWorld(separate, [{ dash: true }, { dash: true }]);
+  for (let t = 0; t < COMBAT.lungewindup; t++) stepWorld(separate);
   assert.ok(separate.fighters[0].x < 2 && separate.fighters[1].x > -2);
 });
 

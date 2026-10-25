@@ -43,14 +43,14 @@ test("drop releases under gravity with retained momentum; it wins simultaneous w
 test("falling reaches the visible ground and stays recoverable before the round expires", () => {
   const world = createWorld();
   stepWorld(world, [{ drop: true }, {}]);
-  tick(world, 600);
+  tick(world, 90);
   const player = world.fighters[0],
     ground = structuredClone(player.air);
   assert.equal(ground.mode, "grounded");
   assert.equal(ground.y, AIR.groundY);
-  tick(world, 600);
-  assert.deepEqual(player.air, ground);
-  assert.equal(player.hp, 100);
+  tick(world, 30);
+  assert.equal(player.air.y, ground.y);
+  assert.equal(player.hp, 90);
   assert.equal(world.status, "playing");
   stepWorld(world, [{ web: true }, {}]);
   assert.equal(player.air.mode, "deploying");
@@ -224,7 +224,7 @@ test("airborne spiders cannot bite/dash/be hit; AI immediately holds and leaves 
   assert.deepEqual(
     world.fighters.map((f) => [f.hp, f.attackId]),
     [
-      [100, 0],
+      [90, 0],
       [100, 0],
     ],
   );

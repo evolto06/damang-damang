@@ -20,7 +20,7 @@ import { createHeldStick } from "../src/scene.js";
 
 test("twin rails stop walking and dashes at the gap; restart selects a fresh layout through its existing third argument", () => {
   const world = createWorld("twin");
-  for (let i = 0; i < 120; i++)
+  for (let i = 0; i < 360; i++)
     stepWorld(world, [
       { direction: 1, dash: true },
       { direction: -1, dash: true },

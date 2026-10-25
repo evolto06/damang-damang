@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { AIR } from "./aerial.js";
 import { MAP_SCALE } from "./movement.js";
-import { span } from "./stage.js";
+import { span, getStage } from "./stage.js";
 
 // Keep the complete drop/retrieve volume between the HUD bands, including on
 // short/wide screens where fitting only the twig would hide the pavement.
@@ -15,9 +15,11 @@ export function fitPlayCamera(
   const topBand = short ? 104 : 148;
   const bottomBand = short ? 94 : width <= 600 ? 174 : 132;
   camera.updateMatrixWorld(true);
-  const top = new THREE.Vector3(0, AIR.stickY + 0.2, 0).applyMatrix4(
-    camera.matrixWorldInverse,
-  ).y;
+  const top = new THREE.Vector3(
+    0,
+    AIR.stickY + (focus.topY ?? 0) + 1.6,
+    0,
+  ).applyMatrix4(camera.matrixWorldInverse).y;
   const bottom = new THREE.Vector3(0, -2.55, 0).applyMatrix4(
     camera.matrixWorldInverse,
   ).y;
@@ -50,6 +52,10 @@ export function followCameraFocus(
 ) {
   const xs = fighters.map((fighter) => fighter.x),
     [low, high] = span(stage);
+  focus.topY = Math.max(
+    ...getStage(stage).sticks.map((stick) => stick.y),
+    ...fighters.map((fighter) => fighter.air?.y ?? 0),
+  );
   const midpoint = (Math.min(...xs) + Math.max(...xs)) / 2;
   const targetSpan = Math.min(
     (high - low) / 2 + 1.8,

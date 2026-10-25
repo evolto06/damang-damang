@@ -7,6 +7,9 @@ export const phaseLabels = {
   windup: "Windup",
   active: "Bite active",
   recovery: "Recovering",
+  lungewindup: "Lunge windup",
+  lungeactive: "Lunge strike",
+  lungerecovery: "Lunge recovery",
   hitstun: "Hit · wait",
   webwindup: "Web windup",
   webrelease: "Web release",
@@ -129,7 +132,7 @@ export function hintsFor(world, index = 0, mode = "bot", input = "keyboard") {
 const returnPrompt = (fighter, keys) =>
   ({
     falling: `Falling · Press ${keys.web} / Web to return.`,
-    grounded: `On pavement · Press ${keys.web} / Web to return before time runs out.`,
+    grounded: `Pavement hurts · Press ${keys.web} / Web to return now.`,
     deploying: "Casting silk · Return is automatic.",
     swinging: `Swinging · ${keys.move} steers; climbing starts automatically.`,
     reeling: `Climbing · ${keys.move} steers; wait for the grip.`,
@@ -190,7 +193,9 @@ export function fightFeedback(runtime) {
     prompt = "Contact · Brief impact hold; actions resume automatically.";
   else if (!attached)
     prompt = player.air.blocked
-      ? `${opponentName} above · Steer ${clearLabel(player, keys)} to clear them and keep climbing.`
+      ? player.air.blockReason === "height"
+        ? `Twig too high · Steer ${clearLabel(player, keys)} back beneath your silk anchor.`
+        : `${opponentName} above · Steer ${clearLabel(player, keys)} to clear them and keep climbing.`
       : returnPrompt(player, keys);
   else if (waiting)
     prompt = `${opponentName} returning · Movement, bite and lunge wait for their grip.`;
@@ -210,6 +215,12 @@ export function fightFeedback(runtime) {
     prompt = "Bite recovery · Wait before moving, biting, lunging or dropping.";
   else if (player.phase === "hitstun")
     prompt = "Hit · Wait to recover before acting again.";
+  else if (player.phase === "lungewindup")
+    prompt = "Lunge windup · Direction committed; the strike follows.";
+  else if (player.phase === "lungeactive")
+    prompt = "Lunge strike · Evades webs; bites can interrupt.";
+  else if (player.phase === "lungerecovery")
+    prompt = "Lunge recovery · Exposed after the strike; wait before acting.";
   else if (dashing)
     prompt =
       "Lunging · Wait for the lunge to finish before biting or dropping.";

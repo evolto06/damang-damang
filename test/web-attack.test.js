@@ -146,7 +146,7 @@ test("shots miss a dropping target, expire, cannot fire in the air, and cooldown
   assert.equal(world.projectiles.length, 0);
   assert.deepEqual(
     world.fighters.map((f) => f.hp),
-    [100, 100],
+    [100, 90],
   );
   assert.equal(world.fighters[0].webId, 1);
   assert.equal(world.fighters[1].webId, 0);
@@ -399,7 +399,7 @@ test("timestamped shooting, dropping and a close combo are independent of render
       }
       frameRuntime(runtime, now);
     }
-    assert.equal(runtime.world.fighters[1].hp, 80);
+    assert.equal(runtime.world.fighters[1].hp, 70);
     return runtime.world;
   });
   assert.deepEqual(outcomes[0], outcomes[1]);

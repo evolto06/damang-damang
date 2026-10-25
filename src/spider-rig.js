@@ -12,6 +12,7 @@ export const PLAYER_TINTS = Object.freeze(["#efc26f", "#a7d9d5"]);
 export const ATTACHMENT = Object.freeze({
   scale: BITE.scale,
   offsetY: BITE.offsetY,
+  legReach: 1.25,
   stride: 0.34,
   stance: 0.72,
   tolerance: 0.02,
@@ -330,7 +331,7 @@ function updateSpiderRig(rig, x, fighter) {
   rig.root.position.set(x, air?.y ?? 0, 0);
   // Rotate about the actual source spinneret cap, keeping the physics outlet
   // and visible silk exactly coincident through the whole sway.
-  rig.inverted.rotation.set(hang.pitch, 0, Math.PI);
+  rig.inverted.rotation.set(hang.pitch, 0, Math.PI * (1 - hang.upright));
   const outlet = new THREE.Vector3(...AIR.outlet).multiplyScalar(
     ATTACHMENT.scale,
   );
@@ -381,7 +382,7 @@ function updateSpiderRig(rig, x, fighter) {
       (leg.side * contactSide) / scale,
       -(contactY - ATTACHMENT.offsetY) / scale,
       leg.hip.z +
-        [0.7, 0.35, -0.4, -0.9][leg.number] +
+        ATTACHMENT.legReach * [0.7, 0.35, -0.4, -0.9][leg.number] +
         (rig.forward * cycle.relativeX) / scale,
     );
     const h = leg.hip.clone();
@@ -484,6 +485,12 @@ function updateSpiderRig(rig, x, fighter) {
         points[joint].lerp(folded[joint], airBlend);
       }
     }
+    // Longer intermediate links open the silhouette while planted toe targets,
+    // jaws, head and body keep their calibrated combat contact geometry.
+    for (let joint = 2; joint < 7; joint++) {
+      points[joint].x = h.x + (points[joint].x - h.x) * ATTACHMENT.legReach;
+      points[joint].z = h.z + (points[joint].z - h.z) * ATTACHMENT.legReach;
+    }
     const positions = leg.mesh.geometry.attributes.position,
       normals = leg.mesh.geometry.attributes.normal;
     for (let j = 0; j < 7; j++) {
@@ -539,7 +546,7 @@ function updateSpiderRig(rig, x, fighter) {
   }
 }
 export function inspectRig(rig) {
-  rig.root.updateMatrixWorld(true);
+  rig.root.updateWorldMatrix(true, true);
   const feet = rig.legs.map((leg) => {
     const segment = leg.segments[6],
       positions = leg.mesh.geometry.attributes.position;

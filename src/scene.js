@@ -26,7 +26,7 @@ const material = (color) => {
   return materials.get(color);
 };
 const boxGeometry = new THREE.BoxGeometry(1, 1, 1);
-const sphereGeometry = new THREE.SphereGeometry(1, 8, 6);
+const sphereGeometry = new THREE.SphereGeometry(1, 12, 8);
 const cylinderGeometry = new THREE.CylinderGeometry(1, 1, 1, 8);
 function box(parent, color, position, scale) {
   const mesh = new THREE.Mesh(boxGeometry, material(color));
@@ -62,6 +62,8 @@ function link(parent, color, a, b, radiusA, radiusB = radiusA) {
     start.distanceTo(end),
     radiusA === radiusB ? radiusA : 1,
   );
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
   parent.add(mesh);
   return mesh;
 }
@@ -120,6 +122,26 @@ export function createStreet(scene) {
   // Two quiet frontages sit behind the fighter silhouettes.
   box(street, "#acbaad", [-5.5, 0.4, -7.4], [11, 5.3, 1.8]);
   box(street, "#c6b7a0", [6.8, 0.3, -8.0], [12.6, 5.1, 2.2]);
+  // Quiet side houses continue behind the wider arenas; inset trim and awnings
+  // give the street depth without adding detail at the fighters' height.
+  for (const [x, color] of [
+    [-18, "#abb5aa"],
+    [19, "#c3b29b"],
+  ]) {
+    box(street, color, [x, 0.2, -9], [12, 5.3, 2]);
+    box(street, "#7c8980", [x, 2.9, -8.6], [12.3, 0.2, 3]);
+    box(street, "#637c78", [x - 1.4, -0.5, -7.92], [1.5, 3.2, 0.1]);
+    box(street, "#738c84", [x + 2, 0.2, -7.92], [2.6, 1.8, 0.1]);
+  }
+  for (const [x, z, width] of [
+    [-7.9, -6.28, 2.2],
+    [-4.2, -6.28, 3],
+    [4.5, -6.7, 4.8],
+  ]) {
+    box(street, "#d0c6ad", [x, 1.15, z], [width, 0.11, 0.2]);
+    box(street, "#8c8e7c", [x - width / 2, -0.1, z], [0.1, 2.5, 0.2]);
+    box(street, "#8c8e7c", [x + width / 2, -0.1, z], [0.1, 2.5, 0.2]);
+  }
   box(street, "#929f94", [-5.5, -1.65, -6.46], [11, 1.15, 0.04]);
   box(street, "#b8aa94", [6.8, -1.65, -6.86], [12.6, 1.15, 0.04]);
   // Corrugated roof fascia: restrained ribs instead of a texture.
@@ -150,6 +172,16 @@ export function createStreet(scene) {
   // Shop opening and simple counter with a few stock shapes.
   box(street, "#657572", [4.5, -0.15, -6.87], [4.5, 2.8, 0.1]);
   box(street, "#9a8e76", [4.5, -1.2, -6.5], [4.8, 0.16, 0.75]);
+  box(street, "#c9b897", [4.5, -1.75, -6.6], [4.6, 0.9, 0.18]);
+  for (let i = 0; i < 8; i++) {
+    const awning = box(
+      street,
+      i % 2 ? "#b6b59c" : "#6d8b7e",
+      [2.3 + i * 0.63, 1.24, -5.95],
+      [0.63, 0.08, 1.6],
+    );
+    awning.rotation.x = 0.15;
+  }
   for (let i = 0; i < 6; i++)
     box(
       street,
@@ -227,6 +259,7 @@ export function createHeldStick(scene, stage = "single") {
     geometryNodes.length = 0;
     for (const {
       body: [left, right],
+      y,
     } of layout.sticks) {
       const twig = new THREE.Mesh(
         new THREE.CylinderGeometry(
@@ -238,7 +271,7 @@ export function createHeldStick(scene, stage = "single") {
         material("#776044"),
       );
       twig.name = "Twig";
-      twig.position.x = (left + right) / 2;
+      twig.position.set((left + right) / 2, y, 0);
       twig.rotation.z = Math.PI / 2;
       twig.castShadow = true;
       root.add(twig);
@@ -252,7 +285,7 @@ export function createHeldStick(scene, stage = "single") {
           material("#8c7350"),
         );
         node.rotation.y = Math.PI / 2;
-        node.position.x = x;
+        node.position.set(x, y, 0);
         root.add(node);
         geometryNodes.push(node);
       }
@@ -294,6 +327,18 @@ export function createHeldStick(scene, stage = "single") {
       0.074,
       0.064,
     );
+    ellipsoid(
+      holder,
+      lightSkin,
+      [x - 0.035, -0.27, 0.17],
+      [0.086, 0.09, 0.086],
+    );
+    ellipsoid(
+      holder,
+      "#d4ac8a",
+      [x - 0.065, 0.047, 0.126],
+      [0.048, 0.059, 0.017],
+    );
   }
   link(
     holder,
@@ -324,6 +369,14 @@ export function createHeldStick(scene, stage = "single") {
   const shirt = "#697e83";
   link(
     holder,
+    "#87989a",
+    [7.96, -1.57 - STICK_LIFT, -0.49],
+    [8.1, -1.68 - STICK_LIFT, -0.53],
+    0.43,
+    0.44,
+  );
+  link(
+    holder,
     shirt,
     [8.0, -1.65 - STICK_LIFT, -0.5],
     [8.48, -1.86 - STICK_LIFT, -0.64],
@@ -340,8 +393,10 @@ export function createHeldStick(scene, stage = "single") {
     drawTwigs(layout);
     holder.position.x =
       STICK.holderOffset + (layout.sticks.at(-1).body[1] - STICK.rightEnd);
+    holder.position.y = layout.sticks.at(-1).y;
     leftHolder.visible = layout.sticks.length > 1;
     leftHolder.position.x = layout.sticks[0].body[0] + 0.6 + 6.5;
+    leftHolder.position.y = layout.sticks[0].y;
     root.userData.stage = layout.id;
   };
   root.setStage(stage);

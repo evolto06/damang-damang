@@ -1,4 +1,5 @@
-import { createWorld, stepWorld, COMBAT } from "./combat.js";
+import { advanceCoaching } from './match-flow.js';
+import { createWorld, stepWorld, COMBAT } from './combat.js';
 
 export const CLOCK = Object.freeze({
   step: 1 / COMBAT.tickRate,
@@ -47,8 +48,8 @@ const createControls = () => ({ direction: 0, inputs: [] });
 export function createRuntime({
   createOpponent = () => ({}),
   decideOpponent = () => ({}),
-  mode = "bot",
-  stage = "single",
+  mode = 'bot',
+  stage = 'single',
 } = {}) {
   const world = createWorld(stage);
   return {
@@ -79,12 +80,9 @@ export function setReady(runtime, ready) {
 }
 function queue(runtime, fighter, kind, value, timestamp) {
   const controls = runtime.controls[fighter];
-  if (!controls || (runtime.mode === "bot" && fighter !== 0)) return false;
-  if (!runtime.ready || runtime.paused || runtime.world.status !== "playing")
-    return false;
-  const at = Number.isFinite(timestamp)
-    ? timestamp
-    : (runtime.clock.previous ?? 0);
+  if (!controls || (runtime.mode === 'bot' && fighter !== 0)) return false;
+  if (!runtime.ready || runtime.paused || runtime.world.status !== 'playing') return false;
+  const at = Number.isFinite(timestamp) ? timestamp : (runtime.clock.previous ?? 0);
   controls.inputs.push({ kind, value, at });
   controls.inputs.sort((a, b) => a.at - b.at);
   return true;
@@ -92,14 +90,14 @@ function queue(runtime, fighter, kind, value, timestamp) {
 // Events are consumed once at their first eligible tick, including when a busy
 // fighter rejects them. They never become a buffered attack after recovery.
 export const queueAction = (runtime, fighter, kind, timestamp) =>
-  ["bite", "dash", "drop", "web", "shoot"].includes(kind) &&
+  ['bite', 'dash', 'drop', 'web', 'shoot'].includes(kind) &&
   queue(runtime, fighter, kind, true, timestamp);
 export const queueDirection = (runtime, fighter, direction, timestamp) =>
-  queue(runtime, fighter, "direction", Math.sign(direction), timestamp);
+  queue(runtime, fighter, 'direction', Math.sign(direction), timestamp);
 export function pauseRuntime(runtime, value) {
   clearActions(runtime);
   resetClock(runtime.clock);
-  if (runtime.world.status === "ended") return false;
+  if (runtime.world.status === 'ended') return false;
   runtime.paused = value;
   return true;
 }
@@ -116,14 +114,14 @@ function sampleAction(controls, tickTime) {
   const action = { direction: controls.direction };
   while (controls.inputs.length && controls.inputs[0].at <= tickTime + 1e-7) {
     const input = controls.inputs.shift();
-    if (input.kind === "direction")
-      controls.direction = action.direction = input.value;
+    action.activity = true;
+    if (input.kind === 'direction') controls.direction = action.direction = input.value;
     else action[input.kind] = true;
   }
   return action;
 }
 export function frameRuntime(runtime, timestamp) {
-  if (!runtime.ready || runtime.paused || runtime.world.status !== "playing") {
+  if (!runtime.ready || runtime.paused || runtime.world.status !== 'playing') {
     resetClock(runtime.clock);
     runtime.alpha = 1;
     return 0;
@@ -131,16 +129,18 @@ export function frameRuntime(runtime, timestamp) {
   const rebased = runtime.clock.previous === null;
   const steps = runClock(runtime.clock, timestamp, (tickTime) => {
     const actions = [sampleAction(runtime.controls[0], tickTime)];
-    if (runtime.mode === "pvp")
-      actions.push(sampleAction(runtime.controls[1], tickTime));
+    if (runtime.mode === 'pvp') actions.push(sampleAction(runtime.controls[1], tickTime));
     else
       actions.push(
-        runtime.world.hitstop > 0
+        runtime.world.hitstop > 0 || runtime.coaching?.step === 'move'
           ? {}
           : runtime.decideOpponent(runtime.ai, runtime.world),
       );
+    const before = runtime.coaching ? { ...runtime.world.fighters[0] } : null;
     stepWorld(runtime.world, actions);
-    if (runtime.world.status === "ended") {
+    if (runtime.mode === 'bot' && before)
+      advanceCoaching(runtime.coaching, before, runtime.world.fighters[0]);
+    if (runtime.world.status === 'ended') {
       clearActions(runtime);
       return false;
     }
@@ -150,7 +150,7 @@ export function frameRuntime(runtime, timestamp) {
   // blends the last two tick states with it instead of snapping at 60 Hz. A
   // clock rebase has no previous tick to blend from, so show the current state.
   runtime.alpha =
-    runtime.world.status === "playing" && !rebased
+    runtime.world.status === 'playing' && !rebased
       ? Math.max(0, Math.min(1, runtime.clock.accumulator / CLOCK.step))
       : 1;
   return steps;

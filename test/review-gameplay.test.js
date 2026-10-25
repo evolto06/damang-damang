@@ -1,59 +1,57 @@
-import test from "node:test";
-import assert from "node:assert/strict";
-import { createWorld, stepWorld, COMBAT } from "../src/combat.js";
-import { AIR, isAttached } from "../src/aerial.js";
-import { RULES } from "../src/movement.js";
-import { getStage, sameStick } from "../src/stage.js";
-import { createAI, decideAI } from "../src/ai.js";
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { createWorld, stepWorld, COMBAT } from '../src/combat.js';
+import { AIR, isAttached } from '../src/aerial.js';
+import { RULES } from '../src/movement.js';
+import { getStage, sameStick } from '../src/stage.js';
+import { createAI, decideAI } from '../src/ai.js';
 
-test("pavement impact hurts once, lingering hurts each second, and silk still recovers", () => {
+test('pavement impact hurts once, lingering hurts each second, and silk still recovers', () => {
   const world = createWorld(),
     fighter = world.fighters[0];
   stepWorld(world, [{ drop: true }, {}]);
-  for (let t = 0; t < 180 && fighter.air.mode !== "grounded"; t++)
-    stepWorld(world);
+  for (let t = 0; t < 180 && fighter.air.mode !== 'grounded'; t++) stepWorld(world);
   assert.equal(fighter.hp, 90);
   for (let t = 0; t < 59; t++) stepWorld(world);
   assert.equal(fighter.hp, 90);
   stepWorld(world);
   assert.equal(fighter.hp, 85);
-  for (let t = 0; t < 500 && !isAttached(fighter); t++)
-    stepWorld(world, [{ web: t === 0 }, {}]);
+  for (let t = 0; t < 500 && !isAttached(fighter); t++) stepWorld(world, [{ web: t === 0 }, {}]);
   assert.ok(isAttached(fighter));
   assert.ok(fighter.hp > 0);
 });
 
-test("simultaneous lethal pavement impacts draw and freeze through the normal result flow", () => {
+test('simultaneous lethal pavement impacts draw and freeze through the normal result flow', () => {
   const world = createWorld();
   for (const fighter of world.fighters) {
     fighter.hp = 10;
     Object.assign(fighter.air, {
-      mode: "falling",
+      mode: 'falling',
       y: AIR.groundY + 0.001,
       vy: -1,
     });
   }
   stepWorld(world);
-  assert.equal(world.status, "ended");
-  assert.equal(world.winner, "draw");
-  assert.ok(world.events.every((event) => event.type === "groundhit"));
+  assert.equal(world.status, 'ended');
+  assert.equal(world.winner, 'draw');
+  assert.ok(world.events.every((event) => event.type === 'groundhit'));
   const ended = structuredClone(world);
   stepWorld(world);
   assert.deepEqual(world, ended);
 });
 
-test("a lunge telegraphs startup, strikes once, knocks off, and commits to recovery on a miss", () => {
+test('a lunge telegraphs startup, strikes once, knocks off, and commits to recovery on a miss', () => {
   const world = createWorld(),
     [player, target] = world.fighters;
   player.x = 0;
   target.x = RULES.separation + 0.5;
   stepWorld(world, [{ dash: true }, {}]);
-  assert.equal(player.phase, "lungewindup");
+  assert.equal(player.phase, 'lungewindup');
   assert.equal(player.x, 0);
   let hits = 0;
   for (let t = 0; t < 120; t++) {
     stepWorld(world);
-    hits += world.events.filter((event) => event.type === "hit").length;
+    hits += world.events.filter((event) => event.type === 'hit').length;
   }
   assert.equal(hits, 1);
   assert.equal(target.hp, 100 - COMBAT.lungeDamage - COMBAT.groundDamage);
@@ -65,16 +63,16 @@ test("a lunge telegraphs startup, strikes once, knocks off, and commits to recov
     seen.add(miss.fighters[0].phase);
     stepWorld(miss);
   }
-  assert.ok(seen.has("lungeactive") && seen.has("lungerecovery"));
+  assert.ok(seen.has('lungeactive') && seen.has('lungerecovery'));
   assert.equal(miss.fighters[1].hp, 100);
 });
 
-test("raised arena has distinct heights, silk reaches both levels and the bot can cross either way", () => {
-  const stage = getStage("terraces");
-  assert.equal(stage.id, "terraces");
+test('raised arena has distinct heights, silk reaches both levels and the bot can cross either way', () => {
+  const stage = getStage('terraces');
+  assert.equal(stage.id, 'terraces');
   assert.ok(stage.sticks[1].y > stage.sticks[0].y);
   for (const side of [-1, 1]) {
-    const world = createWorld("terraces"),
+    const world = createWorld('terraces'),
       ai = createAI();
     const [player, bot] = world.fighters;
     player.x = side * 5;
@@ -82,7 +80,7 @@ test("raised arena has distinct heights, silk reaches both levels and the bot ca
     player.air.y = stage.sticks[side > 0 ? 1 : 0].y;
     bot.air.y = stage.sticks[side > 0 ? 0 : 1].y;
     let crossed = false;
-    for (let t = 0; t < 1600 && world.status === "playing"; t++) {
+    for (let t = 0; t < 1600 && world.status === 'playing'; t++) {
       stepWorld(world, [{}, decideAI(ai, world)]);
       assert.ok(Number.isFinite(bot.x + bot.air.y));
       if (isAttached(bot) && sameStick(bot.x, player.x, stage)) {
@@ -95,7 +93,7 @@ test("raised arena has distinct heights, silk reaches both levels and the bot ca
   }
 });
 
-test("seeded bots mix telegraphed ranged pressure into approach without reading inputs", () => {
+test('seeded bots mix telegraphed ranged pressure into approach without reading inputs', () => {
   let shots = 0;
   for (let seed = 1; seed <= 12; seed++) {
     const world = createWorld(),
@@ -116,12 +114,12 @@ test("seeded bots mix telegraphed ranged pressure into approach without reading 
   assert.ok(shots > 0);
 });
 
-test("a low silk anchor cannot snap a spider onto a higher rail during the final grip", () => {
-  const world = createWorld("terraces"),
+test('a low silk anchor cannot snap a spider onto a higher rail during the final grip', () => {
+  const world = createWorld('terraces'),
     fighter = world.fighters[0];
   fighter.x = 1;
   Object.assign(fighter.air, {
-    mode: "reeling",
+    mode: 'reeling',
     y: -0.25,
     targetY: 0,
     anchorX: -1.2,
@@ -129,7 +127,7 @@ test("a low silk anchor cannot snap a spider onto a higher rail during the final
     landingX: 1,
   });
   stepWorld(world);
-  assert.equal(fighter.air.mode, "reeling");
+  assert.equal(fighter.air.mode, 'reeling');
   assert.equal(fighter.air.blocked, true);
   assert.equal(fighter.air.clearDirection, -1);
   for (let t = 0; t < 500 && !isAttached(fighter); t++) {

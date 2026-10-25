@@ -1,25 +1,25 @@
-import test from "node:test";
-import assert from "node:assert/strict";
-import { createGameAudio } from "../src/audio.js";
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { createGameAudio } from '../src/audio.js';
 
 const world = () => ({
   tick: 0,
-  status: "playing",
+  status: 'playing',
   fighters: Array.from({ length: 2 }, () => ({
     hp: 100,
-    phase: "idle",
+    phase: 'idle',
     attackId: 0,
     webId: 0,
-    air: { mode: "attached" },
+    air: { mode: 'attached' },
   })),
 });
 
-test("unavailable or blocked audio does not prevent gameplay", () => {
+test('unavailable or blocked audio does not prevent gameplay', () => {
   for (const Context of [
     null,
     class {
       constructor() {
-        throw new Error("blocked");
+        throw new Error('blocked');
       }
     },
   ]) {
@@ -33,7 +33,7 @@ test("unavailable or blocked audio does not prevent gameplay", () => {
   }
 });
 
-test("audio waits for a gesture, does not repeat a hit on render frames, and mute suppresses cues", () => {
+test('audio waits for a gesture, does not repeat a hit on render frames, and mute suppresses cues', () => {
   let contexts = 0,
     tones = 0,
     stops = 0;
@@ -45,7 +45,7 @@ test("audio waits for a gesture, does not repeat a hit on render frames, and mut
   class Context {
     constructor() {
       contexts++;
-      this.state = "running";
+      this.state = 'running';
       this.currentTime = 0;
     }
     resume() {
@@ -91,7 +91,7 @@ test("audio waits for a gesture, does not repeat a hit on render frames, and mut
   state.fighters[0].hp = 40;
   audio.update(state, { paused: true });
   audio.update(state);
-  assert.equal(tones, 1, "resume must not replay sounds observed while paused");
+  assert.equal(tones, 1, 'resume must not replay sounds observed while paused');
   audio.reset();
   audio.update(world());
   assert.equal(tones, 1);

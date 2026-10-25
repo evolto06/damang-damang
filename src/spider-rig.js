@@ -1,13 +1,14 @@
-import * as THREE from "three";
-import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
-import { STICK } from "./scene.js";
-import { BITE, bitePose } from "./bite-profile.js";
-import { WEB, webPose } from "./web-attack.js";
-import { AIR } from "./aerial.js";
-import { RULES } from "./movement.js";
-import { hangingPose } from "./hanging-pose.js";
+import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { STICK } from './scene.js';
+import { BITE, bitePose } from './bite-profile.js';
+import { WEB, webPose } from './web-attack.js';
+import { AIR } from './aerial.js';
+import { RULES } from './movement.js';
+import { hangingPose } from './hanging-pose.js';
+import { idlePose } from './idle-pose.js';
 
-export const PLAYER_TINTS = Object.freeze(["#efc26f", "#a7d9d5"]);
+export const PLAYER_TINTS = Object.freeze(['#efc26f', '#a7d9d5']);
 
 export const ATTACHMENT = Object.freeze({
   scale: BITE.scale,
@@ -23,11 +24,7 @@ export function footCycle(x, legIndex, side) {
   const offset = legIndex * 0.5 + (side < 0 ? 0 : 0.5);
   const fraction = (((x / ATTACHMENT.stride + offset) % 1) + 1) % 1;
   const stance = fraction < ATTACHMENT.stance;
-  const t = clamp(
-    (fraction - ATTACHMENT.stance) / (1 - ATTACHMENT.stance),
-    0,
-    1,
-  );
+  const t = clamp((fraction - ATTACHMENT.stance) / (1 - ATTACHMENT.stance), 0, 1);
   const smooth = t * t * (3 - 2 * t);
   const relativeX =
     ATTACHMENT.stride *
@@ -44,8 +41,7 @@ export function footCycle(x, legIndex, side) {
 function segmentAxis(geometry) {
   const p = geometry.attributes.position;
   const center = new THREE.Vector3();
-  for (let i = 0; i < p.count; i++)
-    center.add(new THREE.Vector3().fromBufferAttribute(p, i));
+  for (let i = 0; i < p.count; i++) center.add(new THREE.Vector3().fromBufferAttribute(p, i));
   center.divideScalar(p.count);
   const covariance = new THREE.Matrix3();
   covariance.elements.fill(0);
@@ -53,27 +49,21 @@ function segmentAxis(geometry) {
     const v = new THREE.Vector3().fromBufferAttribute(p, i).sub(center);
     for (let row = 0; row < 3; row++)
       for (let col = 0; col < 3; col++)
-        covariance.elements[col * 3 + row] +=
-          v.getComponent(row) * v.getComponent(col);
+        covariance.elements[col * 3 + row] += v.getComponent(row) * v.getComponent(col);
   }
   let axis = new THREE.Vector3(0.7, 0.5, 0.3).normalize();
   for (let i = 0; i < 24; i++) axis.applyMatrix3(covariance).normalize();
   let min = Infinity,
     max = -Infinity;
   for (let i = 0; i < p.count; i++) {
-    const d = new THREE.Vector3()
-      .fromBufferAttribute(p, i)
-      .sub(center)
-      .dot(axis);
+    const d = new THREE.Vector3().fromBufferAttribute(p, i).sub(center).dot(axis);
     min = Math.min(min, d);
     max = Math.max(max, d);
   }
   return { center, axis, length: max - min };
 }
 function coloredGeometry(mesh) {
-  const geometry = mesh.geometry.index
-    ? mesh.geometry.toNonIndexed()
-    : mesh.geometry.clone();
+  const geometry = mesh.geometry.index ? mesh.geometry.toNonIndexed() : mesh.geometry.clone();
   geometry.applyMatrix4(mesh.matrixWorld);
   const colors = new Float32Array(geometry.attributes.position.count * 3);
   const c = mesh.material.color;
@@ -82,8 +72,8 @@ function coloredGeometry(mesh) {
     colors[i + 1] = c.g;
     colors[i + 2] = c.b;
   }
-  geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
-  geometry.deleteAttribute("uv");
+  geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  geometry.deleteAttribute('uv');
   return geometry;
 }
 export function createSpiderRig(source, index) {
@@ -125,8 +115,7 @@ export function createSpiderRig(source, index) {
       legParts.get(match[1]).push({ name: mesh.name, geometry });
     } else if (/^(Chelicera|Fang|Pedipalp|Labium|Maxilla)/.test(mesh.name))
       mouthParts.push({ name: mesh.name, geometry });
-    else if (/^(Opisthosoma|Spinneret|Book_lung)/.test(mesh.name))
-      abdomenParts.push(geometry);
+    else if (/^(Opisthosoma|Spinneret|Book_lung)/.test(mesh.name)) abdomenParts.push(geometry);
     else bodyParts.push(geometry);
   });
   const bodyGeometry = mergeGeometries(bodyParts);
@@ -142,14 +131,10 @@ export function createSpiderRig(source, index) {
   abdomen.add(abdomenMesh);
   const mouth = new THREE.Group();
   torso.add(mouth);
-  const jaws = ["L", "R"].map((side, index) => {
+  const jaws = ['L', 'R'].map((side, index) => {
     const mirror = index ? -1 : 1;
-    const jawPivot = BITE.jawPivot.map((value, axis) =>
-      axis ? value : value * mirror,
-    );
-    const fangPivot = BITE.fangPivot.map((value, axis) =>
-      axis ? value : value * mirror,
-    );
+    const jawPivot = BITE.jawPivot.map((value, axis) => (axis ? value : value * mirror));
+    const fangPivot = BITE.fangPivot.map((value, axis) => (axis ? value : value * mirror));
     const jaw = new THREE.Group(),
       fang = new THREE.Group();
     jaw.position.fromArray(jawPivot);
@@ -159,15 +144,11 @@ export function createSpiderRig(source, index) {
     return { side, jaw, fang, jawPivot, fangPivot };
   });
   // Keep each original pedipalp rigidly connected at its proximal coxa ring.
-  const palps = ["L", "R"].map((side) => {
-    const coxa = mouthParts.find(
-      (part) => part.name === "Pedipalp_" + side + "_1_Coxa",
-    );
+  const palps = ['L', 'R'].map((side) => {
+    const coxa = mouthParts.find((part) => part.name === 'Pedipalp_' + side + '_1_Coxa');
     const measure = segmentAxis(coxa.geometry);
     if (measure.axis.z < 0) measure.axis.negate();
-    const pivot = measure.center
-      .clone()
-      .addScaledVector(measure.axis, -measure.length / 2);
+    const pivot = measure.center.clone().addScaledVector(measure.axis, -measure.length / 2);
     const group = new THREE.Group();
     group.position.copy(pivot);
     mouth.add(group);
@@ -176,22 +157,12 @@ export function createSpiderRig(source, index) {
   for (const part of mouthParts) {
     const joint = jaws.find(
       (item) =>
-        part.name === "Chelicera_" + item.side ||
-        part.name.startsWith("Fang_" + item.side + "_"),
+        part.name === 'Chelicera_' + item.side || part.name.startsWith('Fang_' + item.side + '_'),
     );
-    const isFang = part.name.startsWith("Fang_");
-    const palp = palps.find((item) =>
-      part.name.startsWith("Pedipalp_" + item.side + "_"),
-    );
-    const parent = joint
-      ? isFang
-        ? joint.fang
-        : joint.jaw
-      : palp
-        ? palp.group
-        : mouth;
-    if (palp)
-      part.geometry.translate(...palp.pivot.toArray().map((value) => -value));
+    const isFang = part.name.startsWith('Fang_');
+    const palp = palps.find((item) => part.name.startsWith('Pedipalp_' + item.side + '_'));
+    const parent = joint ? (isFang ? joint.fang : joint.jaw) : palp ? palp.group : mouth;
+    if (palp) part.geometry.translate(...palp.pivot.toArray().map((value) => -value));
     if (joint)
       part.geometry.translate(
         ...(isFang ? joint.fangPivot : joint.jawPivot).map((value) => -value),
@@ -203,19 +174,18 @@ export function createSpiderRig(source, index) {
   }
   const legs = [];
   for (const [name, parts] of legParts) {
-    const side = name[0] === "L" ? -1 : 1,
+    const side = name[0] === 'L' ? -1 : 1,
       number = Number(name[1]) - 1;
-    const pivot = source.getObjectByName("Gait_" + name);
+    const pivot = source.getObjectByName('Gait_' + name);
     const hip = new THREE.Vector3().setFromMatrixPosition(pivot.matrixWorld);
     const ordered = parts
-      .filter((p) => p.name.startsWith("Leg_"))
+      .filter((p) => p.name.startsWith('Leg_'))
       .sort((a, b) => a.name.localeCompare(b.name));
     let cursor = 0;
     const segments = ordered.map((part) => {
       const measure = segmentAxis(part.geometry);
       // Point the measured axis distally using the next joint, or the source hip.
-      if (measure.axis.dot(measure.center.clone().sub(hip)) < 0)
-        measure.axis.negate();
+      if (measure.axis.dot(measure.center.clone().sub(hip)) < 0) measure.axis.negate();
       const segment = {
         ...measure,
         start: cursor,
@@ -224,7 +194,7 @@ export function createSpiderRig(source, index) {
       cursor += segment.count;
       return segment;
     });
-    const claws = parts.filter((p) => p.name.startsWith("Claw_"));
+    const claws = parts.filter((p) => p.name.startsWith('Claw_'));
     const geometries = [...ordered, ...claws].map((p) => p.geometry);
     const geometry = mergeGeometries(geometries);
     const original = geometry.attributes.position.array.slice();
@@ -281,29 +251,29 @@ function updateSpiderRig(rig, x, fighter) {
   const turned = forward !== rig.forward;
   rig.forward = forward;
   rig.facing.rotation.y = (forward * Math.PI) / 2;
-  const phase = fighter?.phase ?? "idle";
+  const phase = fighter?.phase ?? 'idle';
   const ticks = fighter?.phaseTicks ?? 0;
-  rig.material.color.set(phase === "ko" ? "#77736b" : PLAYER_TINTS[rig.index]);
+  rig.material.color.set(phase === 'ko' ? '#77736b' : PLAYER_TINTS[rig.index]);
   rig.material.emissive.set(
-    phase === "webstun"
-      ? "#80c5c9"
-      : phase.startsWith("web")
-        ? "#23666a"
-        : phase === "hitstun"
-          ? "#9c2510"
-          : phase === "windup" || phase === "active"
-            ? "#815012"
-            : "#000000",
+    phase === 'webstun'
+      ? '#80c5c9'
+      : phase.startsWith('web')
+        ? '#23666a'
+        : phase === 'hitstun'
+          ? '#9c2510'
+          : phase === 'windup' || phase === 'active'
+            ? '#815012'
+            : '#000000',
   );
-  rig.material.emissiveIntensity =
-    phase === "active" ? 0.65 : phase === "hitstun" ? 0.8 : 0.35;
+  rig.material.emissiveIntensity = phase === 'active' ? 0.65 : phase === 'hitstun' ? 0.8 : 0.35;
   const pose = fighter?.pose ?? {
     ...bitePose(phase, ticks),
     ...webPose(phase, ticks),
   };
   const webStand = pose.webStand ?? 0,
     webCurl = pose.webCurl ?? 0;
-  rig.torso.position.y = WEB.rise * webStand;
+  const idle = idlePose(fighter);
+  rig.torso.position.y = WEB.rise * webStand + idle.lift;
   rig.abdomen.rotation.x = WEB.curl * webCurl;
   for (const joint of rig.jaws) {
     joint.jaw.rotation.x = pose.jaw;
@@ -313,12 +283,10 @@ function updateSpiderRig(rig, x, fighter) {
     strike = pose.strike ?? 0;
   const hang = hangingPose(fighter, forward);
   for (const palp of rig.palps) {
-    const side = palp.side === "L" ? -1 : 1;
+    const side = palp.side === 'L' ? -1 : 1;
     const pulse = Math.sin(hang.phase + side * 0.8);
     palp.group.rotation.set(
-      -0.38 * rear +
-        0.2 * strike +
-        hang.motion * (0.18 - 0.12 * pulse - 0.18 * hang.climb * pulse),
+      -0.38 * rear + 0.2 * strike + hang.motion * (0.18 - 0.12 * pulse - 0.18 * hang.climb * pulse),
       side * (0.22 * rear + hang.motion * (0.12 + 0.06 * pulse)),
       0,
     );
@@ -332,15 +300,9 @@ function updateSpiderRig(rig, x, fighter) {
   // Rotate about the actual source spinneret cap, keeping the physics outlet
   // and visible silk exactly coincident through the whole sway.
   rig.inverted.rotation.set(hang.pitch, 0, Math.PI * (1 - hang.upright));
-  const outlet = new THREE.Vector3(...AIR.outlet).multiplyScalar(
-    ATTACHMENT.scale,
-  );
-  const neutralOutlet = outlet
-    .clone()
-    .applyAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI);
-  rig.inverted.position
-    .copy(neutralOutlet)
-    .sub(outlet.applyQuaternion(rig.inverted.quaternion));
+  const outlet = new THREE.Vector3(...AIR.outlet).multiplyScalar(ATTACHMENT.scale);
+  const neutralOutlet = outlet.clone().applyAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI);
+  rig.inverted.position.copy(neutralOutlet).sub(outlet.applyQuaternion(rig.inverted.quaternion));
   rig.inverted.position.y += ATTACHMENT.offsetY;
   if (
     !turned &&
@@ -353,9 +315,13 @@ function updateSpiderRig(rig, x, fighter) {
     rig.lastHangPhase === hang.phase &&
     rig.lastHangMotion === hang.motion &&
     rig.lastHangClimb === hang.climb &&
-    rig.lastHangDrift === hang.drift
+    rig.lastHangDrift === hang.drift &&
+    rig.lastIdleLift === idle.lift &&
+    rig.lastIdleBlend === idle.blend
   )
     return;
+  rig.lastIdleLift = idle.lift;
+  rig.lastIdleBlend = idle.blend;
   rig.lastHangPhase = hang.phase;
   rig.lastHangMotion = hang.motion;
   rig.lastHangClimb = hang.climb;
@@ -375,7 +341,7 @@ function updateSpiderRig(rig, x, fighter) {
     // The rear two pairs brace on the twig while the front two pairs attack.
     const attacking = rear + strike > 1e-8;
     const braced = (attacking && leg.number >= 2) || webStand > 0;
-    const radius = STICK.radius + 0.007 + (braced ? 0 : cycle.lift);
+    const radius = STICK.radius + 0.007 + (braced ? 0 : cycle.lift * (1 - idle.blend));
     const contactY = radius * 0.55,
       contactSide = radius * Math.sqrt(1 - 0.55 ** 2);
     const toe = new THREE.Vector3(
@@ -386,7 +352,7 @@ function updateSpiderRig(rig, x, fighter) {
         (rig.forward * cycle.relativeX) / scale,
     );
     const h = leg.hip.clone();
-    h.y += WEB.rise * webStand;
+    h.y += WEB.rise * webStand + idle.lift;
     const s = leg.side,
       z = toe.z;
     const points = [
@@ -399,6 +365,9 @@ function updateSpiderRig(rig, x, fighter) {
       new THREE.Vector3(s * 0.43, toe.y - 0.08, z),
       toe,
     ];
+    // Flex the proximal joints with the body, keeping every distal grip fixed.
+    points[1].y -= idle.lift / 7; // this joint already inherits the lifted hip
+    for (let joint = 2; joint < 7; joint++) points[joint].y += idle.lift * (1 - joint / 7);
     if (webStand > 0) {
       points[2].y += 0.8 * webStand;
       points[2].x += s * 0.18 * webStand;
@@ -466,22 +435,14 @@ function updateSpiderRig(rig, x, fighter) {
         folded[joint].y = 2 * h.y - folded[joint].y;
       // Each pair trails the swing; opposite sides take alternating retrieval
       // strokes rather than marching in place or freezing into one curled pose.
-      const wave = Math.sin(
-        hang.phase + leg.number * 0.9 + (s < 0 ? Math.PI : 0),
-      );
-      const pull = Math.sin(
-        hang.phase * 1.7 + leg.number * 0.65 + (s < 0 ? Math.PI : 0),
-      );
+      const wave = Math.sin(hang.phase + leg.number * 0.9 + (s < 0 ? Math.PI : 0));
+      const pull = Math.sin(hang.phase * 1.7 + leg.number * 0.65 + (s < 0 ? Math.PI : 0));
       for (let joint = 1; joint < points.length; joint++) {
         const distal = joint / 7;
-        folded[joint].x +=
-          s * hang.motion * distal * (0.1 * wave + 0.12 * hang.climb * pull);
-        folded[joint].y -=
-          hang.motion * distal * (0.13 * wave + 0.3 * hang.climb * pull);
+        folded[joint].x += s * hang.motion * distal * (0.1 * wave + 0.12 * hang.climb * pull);
+        folded[joint].y -= hang.motion * distal * (0.13 * wave + 0.3 * hang.climb * pull);
         folded[joint].z +=
-          hang.motion *
-          distal *
-          (-0.22 * hang.drift + 0.12 * wave - 0.38 * hang.climb * pull);
+          hang.motion * distal * (-0.22 * hang.drift + 0.12 * wave - 0.38 * hang.climb * pull);
         points[joint].lerp(folded[joint], airBlend);
       }
     }
@@ -511,9 +472,7 @@ function updateSpiderRig(rig, x, fighter) {
           .applyQuaternion(rotation)
           .add(center);
         positions.setXYZ(i, v.x, v.y, v.z);
-        const normal = vertexNormal
-          .fromArray(leg.originalNormals, i * 3)
-          .applyQuaternion(rotation);
+        const normal = vertexNormal.fromArray(leg.originalNormals, i * 3).applyQuaternion(rotation);
         normals.setXYZ(i, normal.x, normal.y, normal.z);
       }
     }
@@ -521,10 +480,7 @@ function updateSpiderRig(rig, x, fighter) {
     const posedToe = points[7];
     const final = leg.segments[6],
       targetDirection = posedToe.clone().sub(points[6]).normalize();
-    const q = new THREE.Quaternion().setFromUnitVectors(
-      final.axis,
-      targetDirection,
-    );
+    const q = new THREE.Quaternion().setFromUnitVectors(final.axis, targetDirection);
     for (let i = leg.clawStart; i < positions.count; i++) {
       const v = vertex
         .fromArray(leg.original, i * 3)
@@ -532,9 +488,7 @@ function updateSpiderRig(rig, x, fighter) {
         .applyQuaternion(q)
         .add(posedToe);
       positions.setXYZ(i, v.x, v.y, v.z);
-      const n = vertexNormal
-        .fromArray(leg.originalNormals, i * 3)
-        .applyQuaternion(q);
+      const n = vertexNormal.fromArray(leg.originalNormals, i * 3).applyQuaternion(q);
       normals.setXYZ(i, n.x, n.y, n.z);
     }
     positions.needsUpdate = true;
@@ -542,7 +496,7 @@ function updateSpiderRig(rig, x, fighter) {
     leg.contact.copy(posedToe);
     leg.stance =
       airBlend === 0 &&
-      (braced || (cycle.stance && !(attacking && leg.number < 2)));
+      (braced || idle.blend === 1 || (cycle.stance && !(attacking && leg.number < 2)));
   }
 }
 export function inspectRig(rig) {
@@ -560,10 +514,7 @@ export function inspectRig(rig) {
     center.divideScalar(segment.count);
     direction.copy(leg.contact).sub(center).normalize();
     for (let i = segment.start; i < segment.start + segment.count; i++)
-      max = Math.max(
-        max,
-        a.fromBufferAttribute(positions, i).sub(center).dot(direction),
-      );
+      max = Math.max(max, a.fromBufferAttribute(positions, i).sub(center).dot(direction));
     const actual = center
       .clone()
       .addScaledVector(direction, max)
@@ -573,10 +524,8 @@ export function inspectRig(rig) {
       stance: leg.stance,
       point: actual.toArray(),
       radialError: Math.abs(
-        Math.hypot(
-          actual.y - rig.root.getWorldPosition(new THREE.Vector3()).y,
-          actual.z,
-        ) - STICK.radius,
+        Math.hypot(actual.y - rig.root.getWorldPosition(new THREE.Vector3()).y, actual.z) -
+          STICK.radius,
       ),
     };
   });
@@ -584,10 +533,7 @@ export function inspectRig(rig) {
   return {
     forward: rig.forward,
     feet,
-    maxStanceError: Math.max(
-      0,
-      ...feet.filter((f) => f.stance).map((f) => f.radialError),
-    ),
+    maxStanceError: Math.max(0, ...feet.filter((f) => f.stance).map((f) => f.radialError)),
     bodyBounds: {
       min: bodyBounds.min.toArray(),
       max: bodyBounds.max.toArray(),

@@ -1,12 +1,12 @@
-import test from "node:test";
-import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
-import * as THREE from "three";
-import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
-import { createSpiderRig } from "../src/spider-rig.js";
-import { createWorld, stepWorld, COMBAT } from "../src/combat.js";
-import { RULES } from "../src/movement.js";
-import { worldFang } from "../src/bite-profile.js";
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { createSpiderRig } from '../src/spider-rig.js';
+import { createWorld, stepWorld, COMBAT } from '../src/combat.js';
+import { RULES } from '../src/movement.js';
+import { worldFang } from '../src/bite-profile.js';
 import {
   createRuntime,
   setReady,
@@ -14,17 +14,15 @@ import {
   frameRuntime,
   pauseRuntime,
   restartRuntime,
-} from "../src/runtime.js";
+} from '../src/runtime.js';
 
-const file = await readFile(
-  new URL("../public/models/spider.glb", import.meta.url),
-);
+const file = await readFile(new URL('../public/models/spider.glb', import.meta.url));
 const { scene: source } = await new GLTFLoader().parseAsync(
   file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength),
-  "",
+  '',
 );
 source.updateMatrixWorld(true);
-const prosoma = source.getObjectByName("Prosoma_Cephalothorax");
+const prosoma = source.getObjectByName('Prosoma_Cephalothorax');
 const rigs = [createSpiderRig(source, 0), createSpiderRig(source, 1)];
 function render(world) {
   rigs.forEach((rig, index) => {
@@ -33,18 +31,14 @@ function render(world) {
   });
 }
 function actualTip(index, side) {
-  const mesh = rigs[index].mouth.getObjectByName(
-    `Fang_${side < 0 ? "L" : "R"}_tip`,
-  );
+  const mesh = rigs[index].mouth.getObjectByName(`Fang_${side < 0 ? 'L' : 'R'}_tip`);
   const positions = mesh.geometry.attributes.position;
   // Independently identify the original apex: the unique innermost X vertex,
   // distinct from its four-vertex proximal ring. No profile coordinates used.
   let vertex = 0;
   for (let i = 1; i < positions.count; i++)
     if ((positions.getX(i) - positions.getX(vertex)) * -side > 0) vertex = i;
-  return new THREE.Vector3()
-    .fromBufferAttribute(positions, vertex)
-    .applyMatrix4(mesh.matrixWorld);
+  return new THREE.Vector3().fromBufferAttribute(positions, vertex).applyMatrix4(mesh.matrixWorld);
 }
 function visibleDistance(point, target) {
   const geometry = prosoma.geometry,
@@ -58,10 +52,7 @@ function visibleDistance(point, target) {
         .applyMatrix4(prosoma.matrixWorld)
         .applyMatrix4(rigs[target].inverted.matrixWorld),
     );
-    const nearest = new THREE.Triangle(...vertices).closestPointToPoint(
-      point,
-      new THREE.Vector3(),
-    );
+    const nearest = new THREE.Triangle(...vertices).closestPointToPoint(point, new THREE.Vector3());
     distance = Math.min(distance, nearest.distanceTo(point));
   }
   return distance;
@@ -78,15 +69,13 @@ function assertVisibleContact(world) {
     const actual = actualTip(hit.source, hit.contact.side);
     assert.ok(
       visibleDistance(actual, hit.target) < 1e-6,
-      "rendered original fang apex touches an actual visible prosoma triangle",
+      'rendered original fang apex touches an actual visible prosoma triangle',
     );
-    assert.ok(
-      actual.distanceTo(new THREE.Vector3(...hit.contact.point)) < 1e-6,
-    );
+    assert.ok(actual.distanceTo(new THREE.Vector3(...hit.contact.point)) < 1e-6);
   }
 }
 
-test("rendered original fang apex follows the shared hinge arc on every windup and active tick, both faces", () => {
+test('rendered original fang apex follows the shared hinge arc on every windup and active tick, both faces', () => {
   const world = closeWorld(0.2);
   for (let tick = 0; tick < 24; tick++) {
     stepWorld(world, tick ? [{}, {}] : [{ bite: true }, { bite: true }]);
@@ -107,17 +96,10 @@ test("rendered original fang apex follows the shared hinge arc on every windup a
       }
   }
 });
-test("physical contact at the calibrated range touches GLB triangles; just outside and the old range whiff", () => {
+test('physical contact at the calibrated range touches GLB triangles; just outside and the old range whiff', () => {
   for (const reversed of [false, true])
     for (const attacker of [0, 1])
-      for (const gap of [
-        0,
-        0.01,
-        COMBAT.reach - 1e-6,
-        COMBAT.reach,
-        COMBAT.reach + 1e-5,
-        0.45,
-      ]) {
+      for (const gap of [0, 0.01, COMBAT.reach - 1e-6, COMBAT.reach, COMBAT.reach + 1e-5, 0.45]) {
         const world = closeWorld(gap, reversed),
           actions = [{}, {}];
         actions[attacker] = { bite: true };
@@ -137,15 +119,15 @@ test("physical contact at the calibrated range touches GLB triangles; just outsi
     right = new THREE.Box3().setFromObject(rigs[1].body);
   assert.ok(
     left.max.x < right.min.x,
-    "all non-mouth body meshes remain separated at minimum collision spacing",
+    'all non-mouth body meshes remain separated at minimum collision spacing',
   );
 });
-test("the first displayed damage frame retains real fang contact even with six-tick catch-up; pause/reset clear it", () => {
+test('the first displayed damage frame retains real fang contact even with six-tick catch-up; pause/reset clear it', () => {
   const runtime = createRuntime();
   runtime.world = closeWorld(0.01);
   setReady(runtime, true);
   frameRuntime(runtime, 0);
-  queueAction(runtime, 0, "bite", 1);
+  queueAction(runtime, 0, 'bite', 1);
   for (const time of [100, 200, 300, 400]) frameRuntime(runtime, time);
   assert.equal(runtime.world.fighters[1].hp, 80);
   assert.ok(runtime.world.hitstop > 0);
@@ -159,7 +141,7 @@ test("the first displayed damage frame retains real fang contact even with six-t
   assert.equal(runtime.world.impact, null);
   assert.deepEqual(runtime.world.recoil, [0, 0]);
 });
-test("trades and lethal contact remain visible, with recoil deferred until six subsequent fixed ticks", () => {
+test('trades and lethal contact remain visible, with recoil deferred until six subsequent fixed ticks', () => {
   for (const reversed of [false, true])
     for (const lethal of [false, true]) {
       const world = closeWorld(0.01, reversed);
@@ -182,7 +164,7 @@ test("trades and lethal contact remain visible, with recoil deferred until six s
       }
       stepWorld(world);
       if (lethal) {
-        assert.equal(world.winner, "draw");
+        assert.equal(world.winner, 'draw');
         assertVisibleContact(world);
       } else {
         assert.equal(world.hitstop, 0);
@@ -192,4 +174,20 @@ test("trades and lethal contact remain visible, with recoil deferred until six s
         );
       }
     }
+});
+
+test('a bite started from a fully bouncing idle restores both calibrated bodies before real contact', () => {
+  for (const reversed of [false, true]) {
+    const world = closeWorld(0.01, reversed);
+    for (let tick = 0; tick < 240; tick++) stepWorld(world);
+    assert.ok(world.fighters.every((f) => f.idleBounce.blend === 1));
+    render(world);
+    assert.ok(rigs.every((rig) => rig.torso.position.y > 0));
+    stepWorld(world, [{ bite: true }, {}]);
+    render(world);
+    assert.ok(rigs.every((rig) => rig.torso.position.y === 0));
+    while (!world.impact && world.tick < 265) stepWorld(world);
+    assert.equal(world.fighters[1].hp, 80);
+    assertVisibleContact(world);
+  }
 });

@@ -4,7 +4,7 @@
 
 The simulation advances at **60 ticks per second**. `src/runtime.js` queues timestamped inputs and advances fixed ticks; rendered positions interpolate between the last two ticks. Pause stops simulation progress and clears held inputs. Restart clears the round's projectiles, stun, damage, and movement state. Browser focus loss pauses play.
 
-A round lasts up to **60 seconds**. Health reaching zero ends it early; when time expires, higher health wins and equal health is a draw. Menu, pause, and result controls live in `src/main.js` and `index.html`.
+A match is first to **two round wins**. Draws replay without awarding points. Advancing a round resets combat and inputs while retaining the score and arena; Restart starts a fresh match. A round lasts up to **60 seconds**. Health reaching zero ends it early; when time expires, higher health wins and equal health is a draw. Menu, pause, and result controls live in `src/main.js` and `index.html`.
 
 ## Combat
 
@@ -29,7 +29,7 @@ the human player's controls.
 
 ## Arenas, camera, and opponent
 
-The starting arena has one twig; the wider arena has two horizontal twigs with a gap. Terraces adds a 1.25-unit height difference. Attached height is measured in the shared arena frame; silk targets a twig above the outlet and the grip finishes at that twig height. Twig geometry, available space, contact, and return rules share the stage definition in `src/stage.js`. The follow camera frames the fighters and their aerial movement; `src/camera.js` contains framing rules.
+The starting arena has one twig; the wider arena has two horizontal twigs with a gap. Stepped sticks places the rails at -0.9 and +0.9; Terraces adds a 1.25-unit height difference from the base height. Attached height is measured in the shared arena frame; silk targets a twig above the outlet and the grip finishes at that twig height. Twig geometry, available space, contact, and return rules share the stage definition in `src/stage.js`. The follow camera frames the fighters and their aerial movement; `src/camera.js` contains framing rules.
 
 The bot observes world state rather than player input. It uses seeded decision timing for repeatability, responds to exposed attack phases, and uses aerial controls to return after a drop or knock-off. The exact delays and tactical choices are defined in `src/ai.js`.
 
@@ -39,7 +39,13 @@ The bot observes world state rather than player input. It uses seeded decision t
 
 `src/feedback.js` chooses contextual hints. Visual hints sit near each spider, with a screen-reader live-region fallback. The pause dialog can disable hints; storage access is guarded so blocked browser storage does not prevent play.
 
+Optional coaching waits for movement before allowing the bot to act, then teaches web shots and bites. Actual action starts advance the steps; completion or skipping is saved through guarded browser storage. Two-player touch keeps pointer ownership separate for each fighter.
+
+Hits add render-only camera shake, floating damage numbers, and health-bar emphasis. Reduced-motion preferences suppress moving effects; these effects never change simulation state.
+
 `src/audio.js` synthesizes gameplay sounds through Web Audio after a user gesture and provides mute control. No downloaded audio files are bundled.
+
+After three seconds without gameplay input, an attached, resting spider gently bounces with its feet anchored to the stick; pausing freezes the motion, and combat restores both spiders to their calibrated pose.
 
 ## Release checks and limits
 

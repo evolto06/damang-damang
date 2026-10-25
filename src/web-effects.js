@@ -1,5 +1,5 @@
-import * as THREE from "three";
-import { WEB, headCenter } from "./web-attack.js";
+import * as THREE from 'three';
+import { WEB, headCenter } from './web-attack.js';
 
 // A travelling net and short wake are finite, never a target-spanning beam.
 function net(material) {
@@ -23,15 +23,12 @@ function net(material) {
     points.push(0, 0, 0, 0, Math.cos(a), Math.sin(a));
   }
   const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute(
-    "position",
-    new THREE.Float32BufferAttribute(points, 3),
-  );
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(points, 3));
   return new THREE.LineSegments(geometry, material);
 }
 export function createWebEffects(parent) {
   const material = new THREE.LineBasicMaterial({
-    color: "#efffff",
+    color: '#efffff',
     depthWrite: false,
   });
   const bolts = [],
@@ -51,7 +48,7 @@ export function createWebEffects(parent) {
         group.add(mesh);
         const tailGeometry = new THREE.BufferGeometry();
         tailGeometry.setAttribute(
-          "position",
+          'position',
           new THREE.Float32BufferAttribute([0, 0, 0, 0, 0, 0], 3),
         );
         const tail = new THREE.Line(tailGeometry, material);
@@ -61,11 +58,10 @@ export function createWebEffects(parent) {
       }
       bolts.forEach(({ group, tail }, index) => {
         const shot = world.projectiles[index];
-        group.visible = !!shot && world.status === "playing";
+        group.visible = !!shot && world.status === 'playing';
         if (!group.visible) return;
         const point = shot.position.map(
-          (value, axis) =>
-            shot.previous[axis] + (value - shot.previous[axis]) * alpha,
+          (value, axis) => shot.previous[axis] + (value - shot.previous[axis]) * alpha,
         );
         group.position.fromArray(point);
         group.rotation.z = Math.atan2(shot.velocity[1], shot.velocity[0]);
@@ -76,8 +72,7 @@ export function createWebEffects(parent) {
       });
       wraps.forEach((mesh, index) => {
         const fighter = shown[index];
-        mesh.visible =
-          fighter.phase === "webstun" && world.status === "playing";
+        mesh.visible = fighter.phase === 'webstun' && world.status === 'playing';
         if (!mesh.visible) return;
         mesh.position.fromArray(headCenter(fighter));
         mesh.rotation.y = Math.PI / 2;

@@ -19,7 +19,7 @@ declaration or a submitted entry. Confirm current deadlines with the organizers.
 
 The official gameplay condition permits PvP or PvE with leaderboards. This project
 uses its local PvP mode as its competitive match format, with a 60-second limit,
-health-based winner and equal-health draw. Controller support improves the local
+health-based round winner and equal-health draw, in a first-to-two series. Controller support improves the local
 demo; the PDF does not specifically mandate controllers.
 
 ## Draft synopsis
@@ -37,7 +37,7 @@ leave opportunities for an opponent to interrupt or punish it. Damaging hits kno
 surviving spiders off the twig. Players cast silk, steer a pendulum swing and climb
 back into the fight; landing on the pavement costs health.
 
-Three arenas offer a single twig, separated twigs and twigs at different heights.
+Four arenas offer a single twig, separated twigs and two layouts at different heights.
 A shared camera follows both fighters. Players can practice against a bot or compete
 locally using a split keyboard, controllers, or touch alongside a controller. Nearby
 button hints teach the current action, while distinct fighter colors, health displays

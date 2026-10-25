@@ -15,27 +15,22 @@
         aria-label="Two spiders hanging beneath a thin stick held by a person on a barangay street"
       ></canvas>
       <div class="vignette" aria-hidden="true"></div>
-      <section
-        id="start-screen"
-        class="start-screen"
-        aria-labelledby="start-title"
-      >
+      <section id="start-screen" class="start-screen" aria-labelledby="start-title">
         <div class="start-shell">
           <div class="start-intro">
             <span class="start-eyebrow"
               ><i aria-hidden="true"></i> Laro sa kanto · Klasikong Pinoy</span
             >
             <h1 id="start-title">Damang<br /><span>Damang.</span></h1>
-            <p class="start-tagalog" lang="fil">
-              Maliit na gagamba. Malaking laban.
-            </p>
+            <p class="start-tagalog" lang="fil">Maliit na gagamba. Malaking laban.</p>
             <p class="start-description">
-              Magkita sa patpat. Ihanda ang sapot, lapitang mabuti, at kagatin
-              ang kalaban.
+              Magkita sa patpat. Ihanda ang sapot, lapitang mabuti, at kagatin ang kalaban.
             </p>
-            <span class="start-location"
-              ><span aria-hidden="true">↗</span> Laban sa Barangay</span
-            >
+            <p class="cultural-note">
+              Inspired by the Filipino pastime of spider fighting on a stick, reimagined here with
+              digital spiders.
+            </p>
+            <span class="start-location"><span aria-hidden="true">↗</span> Laban sa Barangay</span>
           </div>
           <div class="start-modes">
             <label class="stage-choice" for="stage-choice"
@@ -44,11 +39,12 @@
                 <option value="single">Barangay · one stick</option>
                 <option value="twin">Crossing · two sticks</option>
                 <option value="terraces">Terraces / raised sticks</option>
+                <option value="heights">Stepped sticks · different heights</option>
               </select></label
             >
             <div class="mode-heading">
               <span class="start-eyebrow">Choose your match</span
-              ><span class="round-pill">Single round</span>
+              ><span class="round-pill">Best of three</span>
             </div>
             <button
               id="start-bot"
@@ -58,68 +54,52 @@
             >
               <span class="mode-number" aria-hidden="true">01</span>
               <span class="mode-copy"
-                ><strong>Bot Match</strong
-                ><span>You vs. the barangay challenger</span
+                ><strong>Bot Match</strong><span>You vs. the barangay challenger</span
                 ><small>One player · Play locally</small></span
               >
               <span class="mode-arrow" aria-hidden="true">↗</span>
             </button>
-            <button
-              id="start-pvp"
-              class="mode-card pvp-card"
-              disabled
-              aria-describedby="pvp-note"
-            >
+            <button id="start-pvp" class="mode-card pvp-card" disabled aria-describedby="pvp-note">
               <span class="mode-number" aria-hidden="true">02</span>
               <span class="mode-copy"
                 ><strong>PvP</strong><span>P1 vs. P2</span
-                ><small id="pvp-note"
-                  >Split keyboard · Optional controllers</small
-                ></span
+                ><small id="pvp-note">Two touch sets · Keyboard · Controllers</small></span
               >
               <span class="mode-arrow" aria-hidden="true">↗</span>
             </button>
-            <p
-              id="start-status"
-              class="start-status"
-              role="status"
-              aria-live="polite"
+            <label class="hint-toggle"
+              ><input id="coaching-choice" type="checkbox" checked /> First-match coaching</label
             >
+            <p id="start-status" class="start-status" role="status" aria-live="polite">
               Preparing the spiders…
             </p>
-            <button id="start-retry" class="start-retry" hidden>
-              Reload game
-            </button>
+            <button id="start-retry" class="start-retry" hidden>Reload game</button>
             <div class="start-tips" aria-label="How to play">
-              <span><b>01 / Move</b> A / D or arrows</span
-              ><span><b>02 / Stun</b> Shoot a web</span
+              <span><b>01 / Move</b> A / D or arrows</span><span><b>02 / Stun</b> Shoot a web</span
               ><span><b>03 / Bite</b> Close range</span>
             </div>
             <p class="start-touch">
-              Touch controls play P1. For PvP, P2 needs a keyboard or
-              controller. On phones, connect a controller to enable PvP.
+              Two players can use touch controls in landscape. Keyboard and controllers also work in
+              either match mode.
             </p>
             <p class="controller-help">
-              Controller · D-pad ← / → move · ↓ drop<br />Face buttons by
-              position: left = bite · top = shoot web · bottom = lunge · right =
-              web return. Start / Options pauses. Menu: D-pad navigates menus;
-              bottom confirms. Left / right changes the arena.
+              Controller · D-pad / left stick ← / → move · D-pad ↓ drop<br />Face buttons by
+              position: left = bite · top = shoot web · bottom = lunge · right = web return. Start /
+              Options pauses. Menus: D-pad moves focus; ← / → changes the arena or a setting; bottom
+              confirms; right face returns.
             </p>
             <p class="controller-help">
-              Xbox, PlayStation and Switch controllers work when the browser
-              provides a standard mapping. Other layouts need browser remapping.
-              Keyboard works in both modes; controllers are optional. In PvP,
-              one pad plays P2; two pads play P1 and P2. Release buttons before
-              joining. Disconnecting keeps keyboard controls available.
+              Xbox, PlayStation and Switch controllers work when the browser provides a standard
+              mapping. Other layouts need browser remapping. Keyboard works in both modes;
+              controllers are optional. In PvP, one pad plays P2; two pads play P1 and P2. Release
+              buttons before joining. Disconnecting keeps keyboard controls available.
             </p>
             <p class="controller-status" data-controller-status role="status">
-              Keyboard ready. Optionally connect a controller, then press and
-              release a button.
+              Keyboard ready. Optionally connect a controller, then press and release a button.
             </p>
           </div>
           <footer class="start-footer">
-            <span>Larong Pinoy. Bagong labanan.</span
-            ><span>Walong paa, pusong kampeon.</span>
+            <span>Larong Pinoy. Bagong labanan.</span><span>Walong paa, pusong kampeon.</span>
           </footer>
         </div>
       </section>
@@ -143,16 +123,10 @@
             </div>
           </div>
           <span class="session"
-            ><span id="stage-name">Barangay</span> ·
-            <time id="round-time" aria-label="Round time remaining">60</time
-            >s</span
+            ><span id="stage-name">Barangay</span> · <span id="series-round">Round 1</span> ·
+            <time id="round-time" aria-label="Round time remaining">60</time>s</span
           >
-          <button
-            id="pause"
-            class="icon-button"
-            aria-label="Pause game"
-            title="Pause (Esc)"
-          >
+          <button id="pause" class="icon-button" aria-label="Pause game" title="Pause (Esc)">
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor">
               <rect x="7" y="5" width="3" height="14" rx="1" />
               <rect x="14" y="5" width="3" height="14" rx="1" />
@@ -164,7 +138,8 @@
             <div class="fighter-title">
               <span class="fighter-dot" aria-hidden="true"></span>
               <h2 id="player-name" lang="fil">Ikaw</h2>
-              <span id="player-detail" class="fighter-detail">You</span
+              <span id="player-score" class="round-score" aria-label="Your round wins">○ ○</span
+              ><span id="player-detail" class="fighter-detail">You</span
               ><span id="player-phase" class="phase-label">Loading</span>
             </div>
             <div class="health-row">
@@ -187,7 +162,9 @@
             <div class="fighter-title">
               <span class="fighter-dot" aria-hidden="true"></span>
               <h2 id="opponent-name" lang="fil">Kalaban</h2>
-              <span id="opponent-detail" class="fighter-detail">AI</span
+              <span id="opponent-score" class="round-score" aria-label="Opponent round wins"
+                >○ ○</span
+              ><span id="opponent-detail" class="fighter-detail">AI</span
               ><span id="opponent-phase" class="phase-label">Loading</span>
             </div>
             <div class="health-row">
@@ -206,38 +183,23 @@
             </div>
           </div>
         </section>
-        <span
-          id="player-damage"
-          class="damage-number"
-          aria-hidden="true"
-          hidden
-        ></span
-        ><span
-          id="opponent-damage"
-          class="damage-number"
-          aria-hidden="true"
-          hidden
-        ></span>
+        <div id="damage-labels" aria-hidden="true"></div>
+        <div id="coaching-panel" class="coaching-panel" hidden>
+          <span id="coaching-copy"></span><button id="skip-coaching">Skip coaching</button>
+        </div>
         <div id="world-labels" aria-hidden="true">
-          <div id="player-marker" class="world-label player-marker">
-            <b>Ikaw</b><span></span>
-          </div>
+          <div id="player-marker" class="world-label player-marker"><b>Ikaw</b><span></span></div>
           <div id="opponent-marker" class="world-label opponent-marker">
             <b>Kalaban</b><span></span>
           </div>
         </div>
         <p class="rotate-hint">Rotate your phone for a closer view ↻</p>
-        <div id="asset-status" class="asset-status" role="status">
-          Preparing the spiders…
-        </div>
+        <div id="asset-status" class="asset-status" role="status">Preparing the spiders…</div>
 
-        <footer class="bottom-bar" aria-label="Fight controls">
+        <footer id="p1-controls" class="bottom-bar" aria-label="Fight controls">
           <div class="movement-controls">
             <span class="control-caption"
-              >Move
-              <span id="move-hint" class="keyboard-hint"
-                >A / D · ← / →</span
-              ></span
+              >Move <span id="move-hint" class="keyboard-hint">A / D · ← / →</span></span
             >
             <div class="keys">
               <button class="key" data-direction="-1" aria-label="Move left">
@@ -256,8 +218,7 @@
               disabled
             >
               <span
-                ><strong>Shoot web</strong
-                ><small id="shoot-status">K · STUN</small></span
+                ><strong>Shoot web</strong><small id="shoot-status">K · STUN</small></span
               ></button
             ><button
               id="bite"
@@ -267,9 +228,7 @@
               disabled
             >
               <span class="bite-icon" aria-hidden="true">⋏</span
-              ><span
-                ><strong>Bite</strong><small id="bite-status">J</small></span
-              ></button
+              ><span><strong>Bite</strong><small id="bite-status">J</small></span></button
             ><button
               id="dash"
               aria-describedby="fight-prompt"
@@ -278,12 +237,8 @@
               disabled
             >
               <span class="dash-icon" aria-hidden="true">↠</span
-              ><span
-                ><strong>Lunge</strong
-                ><small id="dash-status">SHIFT / SPACE</small></span
-              ><span class="cooldown-track" aria-hidden="true"
-                ><i id="cooldown"></i
-              ></span>
+              ><span><strong>Lunge</strong><small id="dash-status">SHIFT / SPACE</small></span
+              ><span class="cooldown-track" aria-hidden="true"><i id="cooldown"></i></span>
             </button>
           </div>
           <div class="aerial-buttons">
@@ -317,11 +272,22 @@
                 <path d="M4 10a8 8 0 1 1 1 8M4 4v6h6" /></svg
               ><span>Restart</span><kbd>R</kbd></button
             ><button id="help" aria-label="Controls">
-              <span class="help-icon" aria-hidden="true">?</span
-              ><span>Controls</span>
+              <span class="help-icon" aria-hidden="true">?</span><span>Controls</span>
             </button>
           </div>
         </footer>
+        <section id="p2-controls" class="p2-controls" aria-label="Player two touch controls" hidden>
+          <span class="touch-player">P2</span>
+          <div class="touch-grid">
+            <button data-fighter="1" data-direction="-1" aria-label="P2 move left">←</button
+            ><button data-fighter="1" data-direction="1" aria-label="P2 move right">→</button
+            ><button data-fighter="1" data-action="shoot">Shoot web</button
+            ><button data-fighter="1" data-action="bite">Bite</button
+            ><button data-fighter="1" data-action="dash">Lunge</button
+            ><button data-fighter="1" data-action="drop">Drop</button
+            ><button data-fighter="1" data-action="web">Return</button>
+          </div>
+        </section>
         <p
           id="fight-prompt"
           class="build-label"
@@ -331,12 +297,7 @@
         >
           Preparing the spiders · Controls unlock when loading finishes.
         </p>
-        <p
-          id="round-announcement"
-          class="sr-only"
-          aria-live="polite"
-          aria-atomic="true"
-        ></p>
+        <p id="round-announcement" class="sr-only" aria-live="polite" aria-atomic="true"></p>
         <div id="overlay" class="overlay" hidden>
           <div
             class="dialog"
@@ -349,63 +310,46 @@
             <h2 id="dialog-title">Fight paused.</h2>
             <p id="dialog-copy">Take a moment. Resume when you’re ready.</p>
             <div id="help-grid" class="help-grid">
-              <kbd>A / ←</kbd><span>Move left along the stick</span
-              ><kbd>D / →</kbd><span>Move right along the stick</span
-              ><kbd>K</kbd
-              ><span>Shoot a web: brief stun, then close in and bite</span
-              ><kbd>J</kbd><span>Bite: commit to a short windup</span
-              ><kbd>Shift / Space</kbd
-              ><span>Lunge: windup, 30 damage, exposed recovery</span
-              ><kbd>↓ / S</kbd><span>Drop from the stick</span><kbd>C</kbd
+              <kbd>A / ←</kbd><span>Move left along the stick</span><kbd>D / →</kbd
+              ><span>Move right along the stick</span><kbd>K</kbd
+              ><span>Shoot a web: brief stun, then close in and bite</span><kbd>J</kbd
+              ><span>Bite: commit to a short windup</span><kbd>Shift / Space</kbd
+              ><span>Lunge: windup, 30 damage, exposed recovery</span><kbd>↓ / S</kbd
+              ><span>Drop from the stick</span><kbd>C</kbd
               ><span>Cast silk once, swing and climb back</span><kbd>R</kbd
-              ><span>Restart the fight</span><kbd>Esc</kbd
-              ><span>Pause or resume</span>
+              ><span>Restart the fight</span><kbd>Esc</kbd><span>Pause or resume</span>
             </div>
             <div id="pvp-help" class="help-grid" hidden>
               <kbd>P1</kbd
-              ><span
-                >A / D move · Q bite · E web shot · W web return · F lunge · S
-                drop</span
+              ><span>A / D move · Q bite · E web shot · W web return · F lunge · S drop</span
               ><kbd>P2</kbd
-              ><span
-                >← / → move · , bite · . web shot · ↑ web return · / lunge · ↓
-                drop</span
-              >
+              ><span>← / → move · , bite · . web shot · ↑ web return · / lunge · ↓ drop</span>
             </div>
             <p id="dialog-footnote" class="dialog-footnote">
-              K shoots a stunning web on the stick. Once it hits, use J at close
-              range to bite during the brief stun. Web shots have a cooldown.
-              Bite and lunge work on the stick. Press C once after dropping to
-              cast silk and return; the opponent can reposition. Pavement deals
-              10 impact damage, then 5 each second. Return quickly: the round
-              ends after 60 seconds. A / D can steer in the air.
+              K shoots a stunning web on the stick. Once it hits, use J at close range to bite
+              during the brief stun. Web shots have a cooldown. Bite and lunge work on the stick.
+              Press C once after dropping to cast silk and return; the opponent can reposition.
+              Pavement deals 10 impact damage, then 5 each second. Return quickly: the round ends
+              after 60 seconds. A / D can steer in the air. Win two rounds to win the match; draws
+              replay without awarding a point.
             </p>
             <p class="controller-help">
-              Controller · D-pad ← / → move · ↓ drop · Left face: bite · Top
-              face: shoot web · Bottom face: lunge · Right face: web return ·
-              Start / Options: pause or resume. Bottom face restarts a finished
-              round. Same controls for P1 and P2; browser standard mapping
-              required. Keyboard stays available. One pad plays P2 in PvP; two
-              pads play P1 and P2. Release controls after joining. Left stick
-              also moves; Back / Share restarts.
+              Controller · D-pad ← / → move · ↓ drop · Left face: bite · Top face: shoot web ·
+              Bottom face: lunge · Right face: web return · Start / Options: pause or resume. Bottom
+              face restarts a finished round. Same controls for P1 and P2; browser standard mapping
+              required. Keyboard stays available. One pad plays P2 in PvP; two pads play P1 and P2.
+              Release controls after joining. Left stick also moves; Back / Share restarts.
             </p>
-            <p
-              class="controller-status"
-              data-controller-status
-              role="status"
-            ></p>
+            <p class="controller-status" data-controller-status role="status"></p>
             <label class="hint-toggle"
-              ><input id="button-hints" type="checkbox" checked /> Button
-              hints</label
-            ><button id="mute" class="dialog-restart" aria-pressed="false">
-              Mute sound</button
-            ><button id="resume" class="resume" aria-label="Resume game">
-              Tuloy / Resume →</button
-            ><button id="dialog-restart" class="dialog-restart">
-              Restart fight</button
-            ><button id="change-mode" class="dialog-restart">
-              Change mode / arena
-            </button>
+              ><input id="button-hints" type="checkbox" checked /> Button hints</label
+            ><label class="hint-toggle"
+              ><input id="touch-pvp" type="checkbox" /> Two touch control sets in PvP</label
+            ><button id="dialog-skip-coaching" class="dialog-restart" hidden>Skip coaching</button
+            ><button id="mute" class="dialog-restart" aria-pressed="false">Mute sound</button
+            ><button id="resume" class="resume" aria-label="Resume game">Tuloy / Resume →</button
+            ><button id="dialog-restart" class="dialog-restart">Restart fight</button
+            ><button id="change-mode" class="dialog-restart">Change mode / arena</button>
           </div>
         </div>
       </div>
@@ -415,16 +359,14 @@
       window.__damangBoot = { ready: false, failed: false };
       window.setTimeout(function () {
         if (window.__damangBoot.ready || window.__damangBoot.failed) return;
-        document.getElementById("start-status").textContent =
-          "The game is taking too long to load. Check your connection and reload.";
-        document.getElementById("start-status").dataset.state = "error";
-        document.getElementById("start-retry").hidden = false;
+        document.getElementById('start-status').textContent =
+          'The game is taking too long to load. Check your connection and reload.';
+        document.getElementById('start-status').dataset.state = 'error';
+        document.getElementById('start-retry').hidden = false;
       }, 15000);
-      document
-        .getElementById("start-retry")
-        .addEventListener("click", function () {
-          window.location.reload();
-        });
+      document.getElementById('start-retry').addEventListener('click', function () {
+        window.location.reload();
+      });
     </script>
     <script type="module" src="/src/main.js"></script>
   </body>

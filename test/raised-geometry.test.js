@@ -1,31 +1,29 @@
-import test from "node:test";
-import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
-import * as THREE from "three";
-import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
-import { createWorld, stepWorld } from "../src/combat.js";
-import { createSpiderRig, inspectRig, ATTACHMENT } from "../src/spider-rig.js";
-import { createHeldStick } from "../src/scene.js";
-import { AIR, isAttached, silkEndpoints } from "../src/aerial.js";
-import { fitPlayCamera, followCameraFocus } from "../src/camera.js";
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { createWorld, stepWorld } from '../src/combat.js';
+import { createSpiderRig, inspectRig, ATTACHMENT } from '../src/spider-rig.js';
+import { createHeldStick } from '../src/scene.js';
+import { AIR, isAttached, silkEndpoints } from '../src/aerial.js';
+import { fitPlayCamera, followCameraFocus } from '../src/camera.js';
 
-const file = await readFile(
-  new URL("../public/models/spider.glb", import.meta.url),
-);
+const file = await readFile(new URL('../public/models/spider.glb', import.meta.url));
 const { scene: source } = await new GLTFLoader().parseAsync(
   file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength),
-  "",
+  '',
 );
 
-test("raised twigs, grip feet, upright roll and visible spinnerets share the simulation frame", () => {
+test('raised twigs, grip feet, upright roll and visible spinnerets share the simulation frame', () => {
   const scene = new THREE.Scene(),
-    parent = createHeldStick(scene, "terraces");
-  const world = createWorld("terraces");
+    parent = createHeldStick(scene, 'terraces');
+  const world = createWorld('terraces');
   const rig = createSpiderRig(source, 1),
     fighter = world.fighters[1];
   parent.add(rig.root);
   assert.ok(ATTACHMENT.legReach > 1);
-  const twigs = parent.children.filter((child) => child.name === "Twig");
+  const twigs = parent.children.filter((child) => child.name === 'Twig');
   assert.deepEqual(
     twigs.map((twig) => twig.position.y),
     [0, 1.25],
@@ -40,16 +38,11 @@ test("raised twigs, grip feet, upright roll and visible spinnerets share the sim
     scene.updateMatrixWorld(true);
     assert.ok(
       Math.abs(rig.inverted.rotation.z - lastRoll) <= 0.27,
-      "flip has no instantaneous jump",
+      'flip has no instantaneous jump',
     );
     lastRoll = rig.inverted.rotation.z;
-    const actual = parent.worldToLocal(
-      rig.spinneret.getWorldPosition(new THREE.Vector3()),
-    );
-    assert.ok(
-      actual.distanceTo(new THREE.Vector3(...silkEndpoints(fighter).origin)) <
-        1e-8,
-    );
+    const actual = parent.worldToLocal(rig.spinneret.getWorldPosition(new THREE.Vector3()));
+    assert.ok(actual.distanceTo(new THREE.Vector3(...silkEndpoints(fighter).origin)) < 1e-8);
     const bounds = new THREE.Box3().setFromObject(rig.root, true);
     assert.ok(bounds.min.y > -2.45, `${fighter.air.mode} stays above pavement`);
   }
@@ -63,8 +56,8 @@ test("raised twigs, grip feet, upright roll and visible spinnerets share the sim
   assert.ok(inspectRig(rig).maxStanceError < 0.02);
 });
 
-test("raised arena camera keeps the high twig and pavement between HUD bands on all target sizes", () => {
-  const world = createWorld("terraces");
+test('raised arena camera keeps the high twig and pavement between HUD bands on all target sizes', () => {
+  const world = createWorld('terraces');
   const camera = new THREE.OrthographicCamera();
   camera.position.set(0, 0.15, 18);
   camera.lookAt(0, 0.4, 0);
@@ -80,10 +73,7 @@ test("raised arena camera keeps the high twig and pavement between HUD bands on 
     for (const y of [AIR.stickY + 1.25 + 0.2, -2.45]) {
       const point = new THREE.Vector3(0, y, 0).project(camera);
       const screenY = ((1 - point.y) * height) / 2;
-      assert.ok(
-        screenY >= bands.topBand - 1 &&
-          screenY <= height - bands.bottomBand + 1,
-      );
+      assert.ok(screenY >= bands.topBand - 1 && screenY <= height - bands.bottomBand + 1);
     }
   }
 });

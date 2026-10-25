@@ -1,22 +1,20 @@
-import test from "node:test";
-import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
-import * as THREE from "three";
-import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
-import { createWorld, stepWorld } from "../src/combat.js";
-import { createSpiderRig } from "../src/spider-rig.js";
-import { createHeldStick } from "../src/scene.js";
-import { AIR, silkEndpoints } from "../src/aerial.js";
-import { RULES } from "../src/movement.js";
-import { createSilkLine } from "../src/silk.js";
-import { fitPlayCamera } from "../src/camera.js";
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { createWorld, stepWorld } from '../src/combat.js';
+import { createSpiderRig } from '../src/spider-rig.js';
+import { createHeldStick } from '../src/scene.js';
+import { AIR, silkEndpoints } from '../src/aerial.js';
+import { RULES } from '../src/movement.js';
+import { createSilkLine } from '../src/silk.js';
+import { fitPlayCamera } from '../src/camera.js';
 
-const file = await readFile(
-  new URL("../public/models/spider.glb", import.meta.url),
-);
+const file = await readFile(new URL('../public/models/spider.glb', import.meta.url));
 const { scene: source } = await new GLTFLoader().parseAsync(
   file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength),
-  "",
+  '',
 );
 source.updateMatrixWorld(true);
 function distanceToMesh(point, mesh, matrix = mesh.matrixWorld) {
@@ -38,7 +36,7 @@ function distanceToMesh(point, mesh, matrix = mesh.matrixWorld) {
   }
   return minimum;
 }
-test("visible silk tracks the original spinneret cap and the actual tapered twig surface", () => {
+test('visible silk tracks the original spinneret cap and the actual tapered twig surface', () => {
   const scene = new THREE.Scene(),
     stick = createHeldStick(scene),
     rig = createSpiderRig(source, 0);
@@ -68,23 +66,17 @@ test("visible silk tracks the original spinneret cap and the actual tapered twig
       .fromBufferAttribute(positions, 1)
       .distanceTo(new THREE.Vector3(...expected.anchor)) < 1e-6,
   );
-  const spinneret = source.getObjectByName("Spinneret_pair2_L");
+  const spinneret = source.getObjectByName('Spinneret_pair2_L');
   assert.ok(
-    distanceToMesh(
-      new THREE.Vector3(...AIR.outlet),
-      spinneret,
-      spinneret.matrixWorld,
-    ) < 1e-7,
+    distanceToMesh(new THREE.Vector3(...AIR.outlet), spinneret, spinneret.matrixWorld) < 1e-7,
   );
   assert.ok(
-    distanceToMesh(
-      new THREE.Vector3(...expected.anchor).add(stick.position),
-      stick.children[0],
-    ) < 1e-7,
+    distanceToMesh(new THREE.Vector3(...expected.anchor).add(stick.position), stick.children[0]) <
+      1e-7,
   );
   assert.ok(rig.legs.every((leg) => !leg.stance && leg.contact.y < leg.hip.y));
 });
-test("the complete folded GLB rests above the pavement and restores planted gait after retrieval", () => {
+test('the complete folded GLB rests above the pavement and restores planted gait after retrieval', () => {
   const scene = new THREE.Scene(),
     stick = createHeldStick(scene),
     rig = createSpiderRig(source, 0);
@@ -98,13 +90,12 @@ test("the complete folded GLB rests above the pavement and restores planted gait
   assert.ok(bottom >= -2.4451 && bottom < -2.435);
   assert.ok(rig.legs.every((leg) => !leg.stance));
   stepWorld(world, [{ web: true }, {}]);
-  for (let i = 0; i < 500 && world.fighters[0].air.mode !== "attached"; i++)
-    stepWorld(world);
+  for (let i = 0; i < 500 && world.fighters[0].air.mode !== 'attached'; i++) stepWorld(world);
   rig.update(world.fighters[0].x, world.fighters[0]);
   assert.equal(rig.root.position.y, 0);
   assert.ok(rig.legs.some((leg) => leg.stance));
 });
-test("actual attached and grounded endpoint silhouettes remain inside HUD-free camera bands", () => {
+test('actual attached and grounded endpoint silhouettes remain inside HUD-free camera bands', () => {
   const scene = new THREE.Scene(),
     stick = createHeldStick(scene),
     rig = createSpiderRig(source, 0);
@@ -125,7 +116,7 @@ test("actual attached and grounded endpoint silhouettes remain inside HUD-free c
           fighter = world.fighters[0];
         fighter.x = x;
         if (grounded) {
-          fighter.air.mode = "grounded";
+          fighter.air.mode = 'grounded';
           fighter.air.y = AIR.groundY;
         }
         rig.update(x, fighter);

@@ -26,45 +26,35 @@ const lerp = (a, b, t) => a + (b - a) * t;
 // Foreleg weights share the sampled/frozen bite pose, including impact frames.
 export const mixPose = (a, b, t) =>
   Object.fromEntries(
-    ["jaw", "fang", "rear", "strike", "webStand", "webCurl"].map((key) => [
+    ['jaw', 'fang', 'rear', 'strike', 'webStand', 'webCurl'].map((key) => [
       key,
       lerp(a[key] ?? 0, b[key] ?? 0, t),
     ]),
   );
 const smooth = (t) => t * t * (3 - 2 * t);
 const forelegPose = (phase, ticks) => {
-  if (phase === "windup")
-    return { rear: smooth(Math.min(1, (ticks + 1) / 18)), strike: 0 };
-  if (phase === "active") {
+  if (phase === 'windup') return { rear: smooth(Math.min(1, (ticks + 1) / 18)), strike: 0 };
+  if (phase === 'active') {
     const snap = smooth(Math.min(1, (ticks + 1) / 3));
     return { rear: 1 - snap, strike: snap };
   }
-  if (phase === "recovery")
-    return { rear: 0, strike: 1 - smooth(Math.min(1, (ticks + 1) / 21)) };
+  if (phase === 'recovery') return { rear: 0, strike: 1 - smooth(Math.min(1, (ticks + 1) / 21)) };
   return { rear: 0, strike: 0 };
 };
 export function bitePose(phase, ticks = 0) {
   return { ...jawPose(phase, ticks), ...forelegPose(phase, ticks) };
 }
 function jawPose(phase, ticks) {
-  if (phase === "windup")
-    return mixPose(
-      { jaw: 0, fang: 0 },
-      { jaw: 0.15, fang: 0.45 },
-      Math.min(1, (ticks + 1) / 18),
-    );
-  if (phase === "active")
+  if (phase === 'windup')
+    return mixPose({ jaw: 0, fang: 0 }, { jaw: 0.15, fang: 0.45 }, Math.min(1, (ticks + 1) / 18));
+  if (phase === 'active')
     return mixPose(
       { jaw: 0.15, fang: 0.45 },
       { jaw: -0.65, fang: -0.8 },
       Math.min(1, (ticks + 1) / 3),
     );
-  if (phase === "recovery")
-    return mixPose(
-      { jaw: -0.65, fang: -0.8 },
-      { jaw: 0, fang: 0 },
-      Math.min(1, (ticks + 1) / 21),
-    );
+  if (phase === 'recovery')
+    return mixPose({ jaw: -0.65, fang: -0.8 }, { jaw: 0, fang: 0 }, Math.min(1, (ticks + 1) / 21));
   return { jaw: 0, fang: 0 };
 }
 const rotateAtX = (point, pivot, angle) => {
@@ -75,11 +65,7 @@ const rotateAtX = (point, pivot, angle) => {
   return [point[0], pivot[1] + y * c - z * s, pivot[2] + y * s + z * c];
 };
 export function fangPoint(pose, side = -1) {
-  const point = rotateAtX(
-    rotateAtX(BITE.tip, BITE.fangPivot, pose.fang),
-    BITE.jawPivot,
-    pose.jaw,
-  );
+  const point = rotateAtX(rotateAtX(BITE.tip, BITE.fangPivot, pose.fang), BITE.jawPivot, pose.jaw);
   point[0] *= -side;
   return point;
 }
@@ -94,24 +80,17 @@ export function worldFang(fighter, pose, side = -1) {
 export function hurtContains(point, target) {
   const local = [
     point[2] / (target.forward * BITE.scale),
-    (BITE.offsetY - point[1]) / BITE.scale -
-      BITE.webRise * (target.pose?.webStand ?? 0),
+    (BITE.offsetY - point[1]) / BITE.scale - BITE.webRise * (target.pose?.webStand ?? 0),
     (point[0] - target.x) / (target.forward * BITE.scale),
   ];
   return HURT_PLANES.every(
-    ([x, y, z, distance]) =>
-      x * local[0] + y * local[1] + z * local[2] <= distance + 1e-9,
+    ([x, y, z, distance]) => x * local[0] + y * local[1] + z * local[2] <= distance + 1e-9,
   );
 }
 // Sweep the real apex on its connected two-hinge arc. Sixteen samples per
 // fixed tick are finer than the narrowest hurt-patch width at maximum dash.
 // Binary refinement returns the actual joint pose at first visible contact.
-export function biteContact(
-  attacker,
-  target,
-  previousAttacker,
-  previousTarget,
-) {
+export function biteContact(attacker, target, previousAttacker, previousTarget) {
   const evaluate = (t, side) => {
     const pose = mixPose(previousAttacker.pose, attacker.pose, t);
     const source = { ...attacker, x: lerp(previousAttacker.x, attacker.x, t) };
@@ -146,11 +125,7 @@ function maximumDistance() {
   let reach = 0;
   for (let sample = 0; sample <= 120; sample++) {
     const point = fangPoint(
-      mixPose(
-        { jaw: 0.15, fang: 0.45 },
-        { jaw: -0.65, fang: -0.8 },
-        sample / 120,
-      ),
+      mixPose({ jaw: 0.15, fang: 0.45 }, { jaw: -0.65, fang: -0.8 }, sample / 120),
     );
     if (point[1] < 0.67952755 || point[1] > 1.08655945) continue;
     const front = Math.min(

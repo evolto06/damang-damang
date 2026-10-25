@@ -8,33 +8,33 @@ A local browser fighting game inspired by spider fighting on twigs in the Philip
 
 Requires Node.js 20.19+ or 22.12+ and a browser with WebGL support.
 
-~~~sh
+```sh
 npm ci
 npm run dev
-~~~
+```
 
 Open the URL printed by Vite. Choose **Bot Match** or local **PvP** after loading. Keyboard and touch work without controllers; optional browser-standard controllers keep their P1/P2 slots across rounds.
 
 ## Controls
 
-| Action | Bot Match | PvP P1 | PvP P2 | Standard controller |
-| --- | --- | --- | --- | --- |
-| Move | A / D or ← / → | A / D | ← / → | D-pad / left stick ← / → |
-| Bite | J | Q | , | Left face (Xbox X) |
-| Shoot web | K | E | . | Top face (Xbox Y) |
-| Lunge | Shift / Space | F | / | Bottom face (Xbox A) |
-| Drop | S / ↓ | S | ↓ | D-pad ↓ |
-| Silk return | C | W | ↑ | Right face (Xbox B) |
-| Pause / resume | Esc | Esc | Esc | Start / Options |
-| Restart | R | R | R | Bottom face on result screen |
+| Action         | Bot Match      | PvP P1 | PvP P2 | Standard controller          |
+| -------------- | -------------- | ------ | ------ | ---------------------------- |
+| Move           | A / D or ← / → | A / D  | ← / →  | D-pad / left stick ← / →     |
+| Bite           | J              | Q      | ,      | Left face (Xbox X)           |
+| Shoot web      | K              | E      | .      | Top face (Xbox Y)            |
+| Lunge          | Shift / Space  | F      | /      | Bottom face (Xbox A)         |
+| Drop           | S / ↓          | S      | ↓      | D-pad ↓                      |
+| Silk return    | C              | W      | ↑      | Right face (Xbox B)          |
+| Pause / resume | Esc            | Esc    | Esc    | Start / Options              |
+| Restart        | R              | R      | R      | Bottom face on result screen |
 
-Touch buttons control P1. On phones, PvP requires a connected controller for P2. Controller bindings follow physical button positions; printed PlayStation and Switch labels differ. Press and release a controller button to connect it. In PvP, one controller takes P2 alongside keyboard/touch P1; two controllers take P1 and P2. D-pad navigates menus; bottom face confirms. Back/Share restarts a running match. Release held controller buttons after starting, resuming, or restarting before playing.
+Touch PvP supplies a separate control set for each fighter; landscape is recommended. The pause dialog can switch back to one touch set, which requires another input for P2. Controller bindings follow physical button positions; printed PlayStation and Switch labels differ. Press and release a controller button to connect it. In PvP, one controller takes P2 alongside keyboard/touch P1; two controllers take P1 and P2. D-pad navigates menus; bottom face confirms. Back/Share restarts a running match. Release held controller buttons after starting, resuming, or restarting before playing.
 
-Move close enough to bite, or shoot a web to briefly stun the opponent. Drop or retreat to evade; while falling or grounded, cast silk and steer to swing back. Choose One stick, Twin sticks or Terraces (two heights) before starting. Lunges now have a committed windup, a 30-damage strike that evades webs, and punishable recovery. Ground impact deals 10 damage, then 5 per second on the pavement. A round ends at zero health or after 60 seconds; higher health wins at timeout, with equal health a draw. The pause dialog contains complete controls, a button-hint switch, sound mute, and a way to change mode or arena. Sounds are synthesized in the browser after your first interaction.
+Move close enough to bite, or shoot a web to briefly stun the opponent. Drop or retreat to evade; while falling or grounded, cast silk and steer to swing back. Choose One stick, Twin sticks, Stepped sticks or Terraces before starting. Lunges have a committed windup, a 30-damage strike that evades webs, and punishable recovery. Ground impact deals 10 damage, then 5 per second on the pavement. A round ends at zero health or after 60 seconds; higher health wins at timeout, with equal health a draw. Win two rounds to win the match; draws replay. Optional first-match coaching teaches movement, webs and bites, and remembers completion or skipping. The pause dialog contains complete controls, a button-hint switch, sound mute, and a way to change mode or arena. Sounds are synthesized in the browser after your first interaction.
 
 ## Build and checks
 
-~~~sh
+```sh
 npm run format:check
 npm test
 npm run build
@@ -42,7 +42,7 @@ node scripts/check-deployment.mjs
 npx playwright install chromium
 npm run test:browser
 npm run preview
-~~~
+```
 
 The build is written to `dist/`. Relative URLs support deployment beneath a subfolder. The deployment check serves the production build under `/damang-damang/` and checks HTML, JavaScript, CSS, and the GLB model over HTTP; it does not render the game.
 

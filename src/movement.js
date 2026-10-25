@@ -1,5 +1,5 @@
-import { BITE } from "./bite-profile.js";
-import { clampToStick, stickAt, sameStick } from "./stage.js";
+import { BITE } from './bite-profile.js';
+import { clampToStick, stickAt, sameStick } from './stage.js';
 export const MAP_SCALE = 1.5;
 const BASE_LIMIT = 5.65,
   BASE_START = 2.45;
@@ -17,9 +17,7 @@ export const RULES = Object.freeze({
 });
 
 const approach = (value, target, amount) =>
-  value < target
-    ? Math.min(value + amount, target)
-    : Math.max(value - amount, target);
+  value < target ? Math.min(value + amount, target) : Math.max(value - amount, target);
 
 export function createMover(x, forward) {
   return {
@@ -74,17 +72,14 @@ export function resolveContact(fighters, previous, stage = fighters[0].stage) {
     rightIndex = 1 - leftIndex;
   const left = fighters[leftIndex],
     right = fighters[rightIndex];
-  left.x = clampToStick(left.x, previous[leftIndex], stage);
-  right.x = clampToStick(right.x, previous[rightIndex], stage);
-  const [leftMin] = stickAt(left.x, stage),
-    [, rightMax] = stickAt(right.x, stage);
-  if (!sameStick(left.x, right.x, stage)) {
+  left.x = clampToStick(left.x, { x: previous[leftIndex], air: left.air }, stage);
+  right.x = clampToStick(right.x, { x: previous[rightIndex], air: right.air }, stage);
+  const [leftMin] = stickAt(left, stage),
+    [, rightMax] = stickAt(right, stage);
+  if (!sameStick(left, right, stage)) {
     for (const fighter of fighters) {
-      const [low, high] = stickAt(fighter.x, stage);
-      if (
-        (fighter.x <= low && fighter.velocity < 0) ||
-        (fighter.x >= high && fighter.velocity > 0)
-      )
+      const [low, high] = stickAt(fighter, stage);
+      if ((fighter.x <= low && fighter.velocity < 0) || (fighter.x >= high && fighter.velocity > 0))
         fighter.velocity = 0;
     }
     return;

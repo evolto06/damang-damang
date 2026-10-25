@@ -18,7 +18,7 @@ human playtesting. Report the arena, match mode, device, and steps for any probl
    return to the inverted grip look convincing.
    In PvP, move the other spider while one swings; walking, lunge and drop should
    remain available, with walking still stopped at twig ends and gaps.
-3. **Arenas.** Try One stick, Twin sticks and Terraces. At a gap, drop toward the
+3. **Arenas.** Try One stick, Twin sticks, Stepped sticks and Terraces. At a gap, drop toward the
    other side, fall for about half a second, then cast. The bot can follow. Try
    crossing from both heights, returning under an opponent, and following the
    open-side hint if a climb is blocked.
@@ -31,8 +31,14 @@ human playtesting. Report the arena, match mode, device, and steps for any probl
 5. **Presentation.** Try your phone in landscape and portrait. Check fighter
    identity, hints, button reachability, arena edges, the hand grip, and the street.
    Listen to bite, lunge, web, impact and round sounds. Toggle mute and button hints,
-   reload, and confirm both preferences persist. On a phone, PvP stays disabled
-   until a controller supplies P2.
+   reload, and confirm both preferences persist. On a phone, test both players'
+   separate touch controls together in landscape. Disabling two touch sets in
+   pause requires a controller for P2 when returning to the menu.
+6. **Match flow and coaching.** Finish a match: round wins should persist, draws
+   should replay without a point, and two wins should finish the series. Confirm
+   New match resets the score. Try the first-match move/web/bite coaching, skip
+   it, then reload; completion or skipping should be remembered. Rest on the twig
+   for three seconds to see the idle bounce; pause should freeze it.
 
 ## Repository administrator
 

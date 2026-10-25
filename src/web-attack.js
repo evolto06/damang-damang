@@ -1,5 +1,5 @@
-import { BITE } from "./bite-profile.js";
-import { AIR, isAttached } from "./aerial.js";
+import { BITE } from './bite-profile.js';
+import { AIR, isAttached } from './aerial.js';
 
 export const WEB = Object.freeze({
   windup: 20,
@@ -23,13 +23,12 @@ const smooth = (t) => {
 export function webPose(phase, ticks = 0) {
   let stand = 0,
     curl = 0;
-  if (phase === "webwindup") {
+  if (phase === 'webwindup') {
     stand = smooth((ticks + 1) / WEB.windup);
     curl = smooth((ticks + 1 - 7) / (WEB.windup - 7));
   }
-  if (phase === "webrelease") stand = curl = 1;
-  if (phase === "webrecovery")
-    stand = curl = 1 - smooth((ticks + 1) / WEB.recovery);
+  if (phase === 'webrelease') stand = curl = 1;
+  if (phase === 'webrecovery') stand = curl = 1 - smooth((ticks + 1) / WEB.recovery);
   // The source ventral side is native -Y (world up while inverted).
   // Lower the connected torso as the rear sweeps toward that side, giving
   // the abdomen room below the twig throughout the arc and its recovery.
@@ -44,8 +43,7 @@ export function posedSpinneret(fighter, pose = fighter.pose) {
     s = Math.sin(angle);
   const y = AIR.outlet[1] - WEB.pivot[1],
     z = AIR.outlet[2] - WEB.pivot[2];
-  const localY =
-    WEB.pivot[1] + y * c - z * s + WEB.rise * (pose?.webStand ?? 0);
+  const localY = WEB.pivot[1] + y * c - z * s + WEB.rise * (pose?.webStand ?? 0);
   const localZ = WEB.pivot[2] + y * s + z * c;
   return [
     fighter.x + fighter.forward * localZ * BITE.scale,
@@ -83,8 +81,8 @@ export function webContact(shot, target, previousTarget) {
   if (
     !isAttached(target) ||
     target.hp <= 0 ||
-    target.phase === "ko" ||
-    target.phase === "lungeactive"
+    target.phase === 'ko' ||
+    target.phase === 'lungeactive'
   )
     return null;
   const startCenter = headCenter(previousTarget),
@@ -94,12 +92,8 @@ export function webContact(shot, target, previousTarget) {
     0.38 * BITE.scale + WEB.radius,
     0.52 * BITE.scale + WEB.radius,
   ];
-  const start = shot.previous.map(
-    (value, axis) => (value - startCenter[axis]) / radius[axis],
-  );
-  const end = shot.position.map(
-    (value, axis) => (value - endCenter[axis]) / radius[axis],
-  );
+  const start = shot.previous.map((value, axis) => (value - startCenter[axis]) / radius[axis]);
+  const end = shot.position.map((value, axis) => (value - endCenter[axis]) / radius[axis]);
   const delta = end.map((value, axis) => value - start[axis]);
   const a = delta.reduce((sum, value) => sum + value * value, 0),
     b = 2 * delta.reduce((sum, value, axis) => sum + value * start[axis], 0);
@@ -114,9 +108,7 @@ export function webContact(shot, target, previousTarget) {
   return t >= 0 && t <= 1
     ? {
         t,
-        point: shot.previous.map(
-          (value, axis) => value + (shot.position[axis] - value) * t,
-        ),
+        point: shot.previous.map((value, axis) => value + (shot.position[axis] - value) * t),
       }
     : null;
 }
@@ -130,21 +122,18 @@ export function advanceWebs(world, previous) {
       remainingRange = Math.max(0, WEB.range - shot.travelled);
     const fraction = speed > 0 ? Math.min(1, remainingRange / speed) : 0;
     if (!fraction) continue;
-    shot.position = shot.position.map(
-      (value, axis) => value + shot.velocity[axis] * fraction,
-    );
+    shot.position = shot.position.map((value, axis) => value + shot.velocity[axis] * fraction);
     shot.age++;
     shot.travelled += speed * fraction;
     const contact = webContact(shot, target, previous[1 - shot.source]);
     if (contact)
       hits.push({
-        type: "webhit",
+        type: 'webhit',
         source: shot.source,
         target: 1 - shot.source,
         contact,
       });
-    else if (shot.age < WEB.lifetime && shot.travelled < WEB.range)
-      remaining.push(shot);
+    else if (shot.age < WEB.lifetime && shot.travelled < WEB.range) remaining.push(shot);
   }
   world.projectiles = remaining;
   return hits;

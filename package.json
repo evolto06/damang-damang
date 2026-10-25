@@ -9,8 +9,9 @@
     "preview": "vite preview --host 127.0.0.1",
     "test": "node --test test/*.test.js",
     "test:browser": "playwright test",
-    "format": "prettier --write src test e2e index.html playwright.config.js",
-    "format:check": "prettier --check src test e2e index.html playwright.config.js"
+    "format": "prettier --write src test e2e browser-smoke index.html playwright.config.js",
+    "format:check": "prettier --check src test e2e browser-smoke index.html playwright.config.js",
+    "test:smoke": "playwright test --project=smoke-root --project=smoke-nested"
   },
   "dependencies": {
     "three": "^0.186.1"

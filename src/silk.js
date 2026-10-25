@@ -1,19 +1,16 @@
-import * as THREE from "three";
-import { AIR, silkEndpoints } from "./aerial.js";
-import { Line2 } from "three/addons/lines/Line2.js";
-import { LineGeometry } from "three/addons/lines/LineGeometry.js";
-import { LineMaterial } from "three/addons/lines/LineMaterial.js";
+import * as THREE from 'three';
+import { AIR, silkEndpoints } from './aerial.js';
+import { Line2 } from 'three/addons/lines/Line2.js';
+import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
+import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
 
 export function createSilkLine(parent) {
   const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute(
-    "position",
-    new THREE.BufferAttribute(new Float32Array(6), 3),
-  );
+  geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(6), 3));
   const line = new THREE.Line(
     geometry,
     new THREE.LineBasicMaterial({
-      color: "#fff8df",
+      color: '#fff8df',
       transparent: true,
       opacity: 0.95,
       depthWrite: false,
@@ -25,7 +22,7 @@ export function createSilkLine(parent) {
   const outlineGeometry = new LineGeometry();
   outlineGeometry.setPositions([0, 0, 0, 0, 0, 0]);
   const outlineMaterial = new LineMaterial({
-    color: "#364b43",
+    color: '#364b43',
     linewidth: 3,
     transparent: true,
     opacity: 0.7,
@@ -51,9 +48,7 @@ export function createSilkLine(parent) {
       rig.spinneret.getWorldPosition(origin);
       parent.worldToLocal(origin);
       const progress =
-        fighter.air.mode === "deploying"
-          ? Math.min(1, fighter.air.ticks / AIR.deployTicks)
-          : 1;
+        fighter.air.mode === 'deploying' ? Math.min(1, fighter.air.ticks / AIR.deployTicks) : 1;
       const positions = geometry.attributes.position;
       positions.setXYZ(0, origin.x, origin.y, origin.z);
       positions.setXYZ(

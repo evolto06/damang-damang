@@ -1,5 +1,5 @@
 :root {
-  font-family: Inter, "Segoe UI", Arial, sans-serif;
+  font-family: Inter, 'Segoe UI', Arial, sans-serif;
   color: #fff7e9;
   background: #756c59;
   font-synthesis: none;
@@ -61,12 +61,7 @@ button svg {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: linear-gradient(
-    #271f2057,
-    transparent 18%,
-    transparent 77%,
-    #271f2045
-  );
+  background: linear-gradient(#271f2057, transparent 18%, transparent 77%, #271f2045);
 }
 .topbar {
   position: absolute;
@@ -677,13 +672,13 @@ button svg {
   color: var(--muted);
   white-space: nowrap;
 }
-.phase-label[data-phase="windup"],
-.phase-label[data-phase="active"] {
+.phase-label[data-phase='windup'],
+.phase-label[data-phase='active'] {
   color: #ffcf78;
   font-weight: 700;
 }
-.phase-label[data-phase="hitstun"],
-.phase-label[data-phase="ko"] {
+.phase-label[data-phase='hitstun'],
+.phase-label[data-phase='ko'] {
   color: #ffb19a;
 }
 .health-row {
@@ -1165,11 +1160,11 @@ button:disabled:hover {
 .bottom-bar {
   max-width: 1150px;
 }
-.phase-label[data-phase="webstun"] {
+.phase-label[data-phase='webstun'] {
   color: #a4e6e5;
 }
-.phase-label[data-phase="webwindup"],
-.phase-label[data-phase="webrelease"] {
+.phase-label[data-phase='webwindup'],
+.phase-label[data-phase='webrelease'] {
   color: #a4e6e5;
 }
 @media (min-width: 601px) and (max-width: 1000px) {
@@ -1256,12 +1251,7 @@ button:disabled:hover {
   overscroll-behavior: contain;
   padding: clamp(24px, 6vh, 68px) max(24px, env(safe-area-inset-right))
     max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
-  background: linear-gradient(
-    100deg,
-    #201e19f2 0%,
-    #29271eee 42%,
-    #302c22df 100%
-  );
+  background: linear-gradient(100deg, #201e19f2 0%, #29271eee 42%, #302c22df 100%);
 }
 .start-screen[hidden] {
   display: none;
@@ -1457,13 +1447,13 @@ button:disabled:hover {
   line-height: 1.6;
   color: #d5c8b1;
 }
-.start-status[data-state="ready"]::before {
-  content: "●";
+.start-status[data-state='ready']::before {
+  content: '●';
   color: var(--gold);
   margin-right: 7px;
   font-size: 9px;
 }
-.start-status[data-state="error"] {
+.start-status[data-state='error'] {
   color: #ffd1b8;
 }
 .start-retry {
@@ -1644,7 +1634,7 @@ button:disabled:hover {
   color: var(--gold);
 }
 
-.mode-card[aria-pressed="true"] {
+.mode-card[aria-pressed='true'] {
   outline: 2px solid var(--gold);
   outline-offset: 3px;
 }
@@ -1769,14 +1759,14 @@ button.hint-active {
     font-size: 10px;
   }
   .start-tips > span:first-child::after {
-    content: "On-screen arrows";
+    content: 'On-screen arrows';
     font-size: 10px;
   }
-  .action-buttons small[data-ready="true"],
-  .aerial-buttons small[data-ready="true"] {
+  .action-buttons small[data-ready='true'],
+  .aerial-buttons small[data-ready='true'] {
     display: none;
   }
-  .world-label[data-input="touch"] span {
+  .world-label[data-input='touch'] span {
     display: none;
   }
   .start-touch {
@@ -1843,38 +1833,379 @@ button.hint-active {
   }
 }
 
-.damage-number {
+/* Series, coaching and impact feedback. Touch PvP gives each player a full set. */
+.cultural-note {
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--muted);
+  max-width: 36ch;
+  margin: 16px 0;
+}
+.round-score {
+  font-size: 13px;
+  letter-spacing: 2px;
+  color: var(--gold);
+  white-space: nowrap;
+}
+.opponent .round-score {
+  color: #a7d9d5;
+}
+.coaching-panel {
+  position: absolute;
+  top: calc(150px + env(safe-area-inset-top));
+  left: var(--edge);
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: calc(100% - 2 * var(--edge));
+  background: #28251ff2;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.coaching-panel[hidden] {
+  display: none;
+}
+.coaching-panel button {
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 8px;
+  font-size: 11px;
+  min-height: 36px;
+}
+.damage-label {
   position: absolute;
   left: 0;
   top: 0;
-  pointer-events: none;
   z-index: 6;
-  font-size: 22px;
-  font-weight: 850;
-  color: #ffefba;
-  text-shadow: 0 2px 3px #4a1717;
-  line-height: 1;
+  pointer-events: none;
+  font-size: 21px;
+  font-weight: 800;
+  color: #fff6d4;
+  text-shadow:
+    0 2px 3px #231a15,
+    0 0 8px #231a15;
+  background: #6b261acc;
+  padding: 2px 6px;
+  border-radius: 5px;
 }
-.damage-number[hidden] {
+.damage-label[hidden] {
   display: none;
 }
-.health-hit {
-  animation: health-flash 0.4s ease-out;
+.health-bar.hit-flash {
+  outline: 2px solid #fff1c2;
+  outline-offset: 2px;
+  background: #a33b2c;
 }
-@keyframes health-flash {
-  0%,
-  40% {
-    filter: brightness(2);
-  }
-  100% {
-    filter: none;
+.p2-controls {
+  position: absolute;
+  right: var(--edge);
+  bottom: calc(56px + env(safe-area-inset-bottom));
+  z-index: 5;
+  width: calc(50% - var(--edge) - 6px);
+  padding: 8px;
+  background: var(--panel);
+  border: 1px solid #a7d9d580;
+  border-radius: 12px;
+}
+.p2-controls[hidden] {
+  display: none;
+}
+.touch-player {
+  display: block;
+  font-size: 11px;
+  color: #a7d9d5;
+  margin: 0 0 5px 3px;
+  font-weight: 700;
+}
+.touch-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 5px;
+}
+.touch-grid button {
+  min-width: 0;
+  min-height: 44px;
+  padding: 5px 3px;
+  background: #ffffff0b;
+  border: 1px solid #a7d9d54a;
+  border-radius: 7px;
+  font-size: 11px;
+  line-height: 1.2;
+}
+.touch-grid button:disabled {
+  opacity: 0.4;
+}
+.touch-grid button.pressed {
+  background: #a7d9d5;
+  color: #201d18;
+}
+.touch-pvp #p1-controls {
+  left: var(--edge);
+  right: auto;
+  width: calc(50% - var(--edge) - 6px);
+  max-width: none;
+  margin: 0;
+  bottom: calc(56px + env(safe-area-inset-bottom));
+  padding: 8px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+  align-items: end;
+}
+.touch-pvp #p1-controls::before {
+  content: 'P1';
+  grid-column: 1/-1;
+  font-size: 11px;
+  color: var(--gold);
+  font-weight: 700;
+}
+.touch-pvp .movement-controls {
+  grid-column: 1;
+}
+.touch-pvp .control-caption {
+  display: none;
+}
+.touch-pvp .keys {
+  gap: 5px;
+}
+.touch-pvp .key {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  height: 44px;
+  font-size: 18px;
+}
+.touch-pvp .key small {
+  display: none;
+}
+.touch-pvp .action-buttons {
+  display: contents;
+}
+.touch-pvp .action-buttons button {
+  min-width: 0;
+  width: auto;
+  min-height: 44px;
+  height: 44px;
+  padding: 5px;
+  justify-content: center;
+  grid-row: auto;
+  gap: 0;
+  border-radius: 7px;
+}
+.touch-pvp .action-buttons strong {
+  font-size: 11px;
+}
+.touch-pvp .action-buttons small,
+.touch-pvp .action-buttons .dash-icon,
+.touch-pvp .action-buttons .bite-icon {
+  display: none;
+}
+.touch-pvp .aerial-buttons {
+  display: flex;
+  gap: 5px;
+  grid-column: 1/-1;
+}
+.touch-pvp .aerial-buttons button {
+  min-width: 0;
+  width: 50%;
+  min-height: 44px;
+  height: 44px;
+  padding: 5px;
+  font-size: 11px;
+}
+.touch-pvp .aerial-buttons small {
+  display: none;
+}
+.touch-pvp .utility-controls {
+  display: none;
+}
+.touch-pvp .p2-controls {
+  min-height: 176px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.touch-pvp .touch-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.touch-pvp .touch-grid button:nth-child(-n + 2) {
+  grid-row: 1;
+}
+.touch-pvp .touch-grid button:last-child {
+  grid-column: 2/4;
+}
+@media (hover: none) and (pointer: coarse) {
+  button:focus-visible {
+    outline-offset: 1px;
   }
 }
-.phase-label[data-phase="lungewindup"],
-.phase-label[data-phase="lungeactive"] {
+@media (orientation: landscape) and (max-height: 540px) {
+  .touch-pvp #p1-controls,
+  .touch-pvp .p2-controls {
+    bottom: calc(42px + env(safe-area-inset-bottom));
+    width: calc(43% - var(--edge));
+    padding: 6px;
+  }
+  .touch-pvp #p1-controls {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px;
+  }
+  .touch-pvp .movement-controls {
+    grid-column: 1/3;
+  }
+  .touch-pvp .action-buttons button {
+    grid-row: 2;
+  }
+  .touch-pvp .aerial-buttons {
+    grid-column: 3/5;
+    grid-row: 3;
+  }
+  .touch-pvp .action-buttons button:last-child {
+    grid-column: 1/3;
+    grid-row: 3;
+  }
+  .touch-pvp .p2-controls {
+    min-height: 163px;
+  }
+  .touch-pvp .touch-grid {
+    gap: 4px;
+  }
+  .touch-pvp .touch-grid button {
+    min-height: 44px;
+  }
+  .fighters {
+    top: calc(60px + env(safe-area-inset-top));
+    padding: 6px 9px;
+  }
+  .topbar {
+    top: calc(8px + env(safe-area-inset-top));
+  }
+  .touch-pvp .identity .subtitle {
+    display: none;
+  }
+  .touch-pvp .identity h1 {
+    font-size: 14px;
+  }
+  .touch-pvp .session {
+    font-size: 10px;
+    padding: 5px;
+  }
+  .touch-pvp .build-label {
+    font-size: 11px;
+    min-height: 28px;
+    bottom: calc(5px + env(safe-area-inset-bottom));
+  }
+  .coaching-panel {
+    top: calc(114px + env(safe-area-inset-top));
+    font-size: 12px;
+    padding: 5px 8px;
+  }
+  .coaching-panel button {
+    min-height: 32px;
+    padding: 5px;
+  }
+}
+@media (orientation: portrait) and (max-width: 600px) {
+  .touch-pvp .rotate-hint {
+    top: calc(128px + env(safe-area-inset-top));
+  }
+  .touch-pvp .build-label {
+    font-size: 11px;
+  }
+  .touch-pvp .fighters {
+    gap: 5px;
+  }
+  .touch-pvp .round-score {
+    font-size: 11px;
+    letter-spacing: 0;
+  }
+  .touch-pvp .fighter-detail {
+    display: none;
+  }
+  .touch-pvp .coaching-panel {
+    top: calc(165px + env(safe-area-inset-top));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .health-bar i {
+    transition: none;
+  }
+  .health-bar.hit-flash {
+    outline: 2px solid #fff1c2;
+  }
+  .damage-label {
+    animation: none;
+    transition: none;
+  }
+}
+
+/* Reset earlier narrow-screen grid placements before assigning shared touch rows. */
+.touch-pvp .movement-controls {
+  grid-row: auto;
+  display: block;
+}
+.touch-pvp .aerial-buttons {
+  grid-row: auto;
+}
+.touch-pvp .keys {
+  width: 100%;
+}
+@media (orientation: landscape) and (max-height: 540px) {
+  .touch-pvp .movement-controls {
+    grid-row: 2;
+  }
+  .touch-pvp .aerial-buttons {
+    grid-row: 3;
+  }
+  .touch-pvp .session {
+    display: block;
+  }
+  .touch-pvp .session + .icon-button {
+    margin-left: 0;
+  }
+}
+
+/* Two 44px action rows per player leave room for the full drop-and-return view. */
+@media (orientation: landscape) and (max-height: 540px) {
+  .touch-pvp .movement-controls {
+    grid-column: 1/3;
+    grid-row: 2;
+  }
+  .touch-pvp .aerial-buttons {
+    grid-column: 3/5;
+    grid-row: 2;
+  }
+  .touch-pvp .action-buttons button {
+    grid-row: 3;
+  }
+  .touch-pvp .action-buttons button:last-child {
+    grid-column: 3/5;
+    grid-row: 3;
+  }
+  .touch-pvp .p2-controls {
+    min-height: 0;
+  }
+  .touch-pvp .touch-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .touch-pvp .touch-grid button:nth-child(-n + 2) {
+    grid-row: auto;
+  }
+  .touch-pvp .touch-grid button:last-child {
+    grid-column: auto;
+  }
+}
+
+.phase-label[data-phase='lungewindup'],
+.phase-label[data-phase='lungeactive'] {
   color: #ffdc8d;
 }
-.phase-label[data-phase="lungerecovery"] {
+.phase-label[data-phase='lungerecovery'] {
   color: #f3a792;
 }
 @media (prefers-reduced-motion: reduce) {

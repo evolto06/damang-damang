@@ -1,19 +1,9 @@
-import { createMover, moveFighter, resolveContact, RULES } from "./movement.js";
-import {
-  bitePose,
-  biteContact,
-  mixPose,
-  BITE_CENTER_REACH,
-} from "./bite-profile.js";
-import { WEB, webPose, launchWeb, advanceWebs } from "./web-attack.js";
-import {
-  AIR,
-  createAir,
-  isAttached,
-  releaseStick,
-  advanceAerial,
-} from "./aerial.js";
-import { getStage, sameStick, stickHeight, clampToStick } from "./stage.js";
+import { createMover, moveFighter, resolveContact, RULES } from './movement.js';
+import { bitePose, biteContact, mixPose, BITE_CENTER_REACH } from './bite-profile.js';
+import { WEB, webPose, launchWeb, advanceWebs } from './web-attack.js';
+import { AIR, createAir, isAttached, releaseStick, advanceAerial } from './aerial.js';
+import { getStage, sameStick, stickHeight, clampToStick } from './stage.js';
+import { createIdle, advanceIdle } from './idle-pose.js';
 
 export const COMBAT = Object.freeze({
   tickRate: 60,
@@ -37,21 +27,19 @@ export const COMBAT = Object.freeze({
   roundTicks: 60 * 60,
 });
 export const clearGap = (world) =>
-  Math.max(
-    0,
-    Math.abs(world.fighters[1].x - world.fighters[0].x) - RULES.separation,
-  );
+  Math.max(0, Math.abs(world.fighters[1].x - world.fighters[0].x) - RULES.separation);
 
 function createFighter(id, x, forward, stage) {
   return {
     ...createMover(x, forward),
     id,
     stage,
+    idleBounce: createIdle(),
     hp: COMBAT.maxHealth,
     air: createAir(stickHeight(x, stage)),
-    phase: "idle",
+    phase: 'idle',
     phaseTicks: 0,
-    pose: bitePose("idle"),
+    pose: bitePose('idle'),
     webCooldown: 0,
     webId: 0,
     attackId: 0,
@@ -59,18 +47,18 @@ function createFighter(id, x, forward, stage) {
     hitTick: -1000,
   };
 }
-export function createWorld(stageId = "single") {
+export function createWorld(stageId = 'single') {
   const stage = getStage(stageId);
   const fighters = [
-    createFighter("player", stage.start[0], 1, stage),
-    createFighter("opponent", stage.start[1], -1, stage),
+    createFighter('player', stage.start[0], 1, stage),
+    createFighter('opponent', stage.start[1], -1, stage),
   ];
   return {
     stage,
     remainingTicks: COMBAT.roundTicks,
     endReason: null,
     tick: 0,
-    status: "playing",
+    status: 'playing',
     winner: null,
     hitstop: 0,
     projectiles: [],
@@ -82,11 +70,11 @@ export function createWorld(stageId = "single") {
   };
 }
 function endRound(world, reason) {
-  world.status = "ended";
+  world.status = 'ended';
   world.endReason = reason;
   world.projectiles = [];
   const [a, b] = world.fighters;
-  world.winner = a.hp === b.hp ? "draw" : a.hp > b.hp ? "player" : "opponent";
+  world.winner = a.hp === b.hp ? 'draw' : a.hp > b.hp ? 'player' : 'opponent';
   world.fighters.forEach((fighter) => {
     fighter.velocity = 0;
     fighter.dashRemaining = 0;
@@ -95,8 +83,7 @@ function endRound(world, reason) {
 function faceOpponent(world) {
   if (!world.fighters.every(isAttached)) return;
   const direction =
-    Math.sign(world.fighters[1].x - world.fighters[0].x) ||
-    world.fighters[0].forward;
+    Math.sign(world.fighters[1].x - world.fighters[0].x) || world.fighters[0].forward;
   world.fighters[0].forward = direction;
   world.fighters[1].forward = -direction;
 }
@@ -106,16 +93,16 @@ const enter = (fighter, phase) => {
 };
 const fighterPose = (fighter) => ({
   ...bitePose(
-    fighter.phase === "lungewindup"
-      ? "windup"
-      : fighter.phase === "lungeactive"
-        ? "active"
-        : fighter.phase === "lungerecovery"
-          ? "recovery"
+    fighter.phase === 'lungewindup'
+      ? 'windup'
+      : fighter.phase === 'lungeactive'
+        ? 'active'
+        : fighter.phase === 'lungerecovery'
+          ? 'recovery'
           : fighter.phase,
-    fighter.phase === "lungewindup"
+    fighter.phase === 'lungewindup'
       ? (fighter.phaseTicks * COMBAT.windup) / COMBAT.lungewindup
-      : fighter.phase === "lungeactive"
+      : fighter.phase === 'lungeactive'
         ? 2
         : fighter.phaseTicks,
   ),
@@ -135,17 +122,17 @@ function transition(fighter) {
   enter(
     fighter,
     {
-      windup: "active",
-      active: "recovery",
-      recovery: "idle",
-      lungewindup: "lungeactive",
-      lungeactive: "lungerecovery",
-      lungerecovery: "idle",
-      hitstun: "idle",
-      webwindup: "webrelease",
-      webrelease: "webrecovery",
-      webrecovery: "idle",
-      webstun: "idle",
+      windup: 'active',
+      active: 'recovery',
+      recovery: 'idle',
+      lungewindup: 'lungeactive',
+      lungeactive: 'lungerecovery',
+      lungerecovery: 'idle',
+      hitstun: 'idle',
+      webwindup: 'webrelease',
+      webrelease: 'webrecovery',
+      webrecovery: 'idle',
+      webstun: 'idle',
     }[fighter.phase],
   );
 }
@@ -154,7 +141,7 @@ function transition(fighter) {
 // available again. A hit's tick is the first of its 11 stunned ticks.
 // Both actions are sampled before movement. Bite takes precedence over dash.
 export function stepWorld(world, actions = [{}, {}]) {
-  if (world.status !== "playing") return world;
+  if (world.status !== 'playing') return world;
   world.tick++;
   world.remainingTicks = Math.max(0, world.remainingTicks - 1);
   world.events = [];
@@ -181,14 +168,13 @@ export function stepWorld(world, actions = [{}, {}]) {
           source = world.fighters[hit.source];
         if (!target.hp || !isAttached(target)) continue;
         releaseStick(target);
-        target.air.vx =
-          (Math.sign(target.x - source.x) || -target.forward) *
-          COMBAT.knockOffSpeed;
+        target.air.vx = (Math.sign(target.x - source.x) || -target.forward) * COMBAT.knockOffSpeed;
       }
       world.recoil = [0, 0];
       world.impact = null;
     }
-    if (!world.remainingTicks) endRound(world, "timeout");
+    if (!world.remainingTicks) endRound(world, 'timeout');
+    advanceIdle(world, actions, true);
     return world;
   }
   faceOpponent(world);
@@ -202,7 +188,7 @@ export function stepWorld(world, actions = [{}, {}]) {
     (fighter, index) =>
       actions[index]?.drop &&
       isAttached(fighter) &&
-      fighter.phase === "idle" &&
+      fighter.phase === 'idle' &&
       fighter.dashRemaining <= 1e-9,
   );
   world.fighters.forEach((fighter, index) => {
@@ -221,7 +207,7 @@ export function stepWorld(world, actions = [{}, {}]) {
         dropping[index] ? { ...action, web: false } : action,
       )
     ) {
-      fighter.pose = bitePose("idle");
+      fighter.pose = bitePose('idle');
       continue;
     }
     const opponentAttached = isAttached(world.fighters[1 - index]);
@@ -229,11 +215,11 @@ export function stepWorld(world, actions = [{}, {}]) {
       action.dash &&
       !action.bite &&
       !action.shoot &&
-      fighter.phase === "idle" &&
+      fighter.phase === 'idle' &&
       fighter.cooldown <= 1e-8 &&
       fighter.dashRemaining <= 1e-9
     ) {
-      enter(fighter, "lungewindup");
+      enter(fighter, 'lungewindup');
       fighter.lungeDirection = Math.sign(action.direction || fighter.forward);
       fighter.attackId++;
       fighter.attackHit = false;
@@ -241,10 +227,10 @@ export function stepWorld(world, actions = [{}, {}]) {
     if (
       action.bite &&
       opponentAttached &&
-      fighter.phase === "idle" &&
+      fighter.phase === 'idle' &&
       fighter.dashRemaining <= 1e-9
     ) {
-      enter(fighter, "windup");
+      enter(fighter, 'windup');
       fighter.attackId++;
       fighter.attackHit = false;
     }
@@ -252,23 +238,23 @@ export function stepWorld(world, actions = [{}, {}]) {
       action.shoot &&
       opponentAttached &&
       !action.bite &&
-      fighter.phase === "idle" &&
+      fighter.phase === 'idle' &&
       fighter.webCooldown === 0 &&
       fighter.dashRemaining <= 1e-9
     ) {
-      enter(fighter, "webwindup");
+      enter(fighter, 'webwindup');
       fighter.webCooldown = WEB.cooldown;
       fighter.webId++;
     }
     fighter.pose = fighterPose(fighter);
-    const lunging = fighter.phase === "lungeactive";
+    const lunging = fighter.phase === 'lungeactive';
     moveFighter(
       fighter,
       lunging
         ? { direction: fighter.lungeDirection, dash: fighter.phaseTicks === 0 }
         : { direction: action.direction },
       1 / COMBAT.tickRate,
-      fighter.phase === "idle" || lunging,
+      fighter.phase === 'idle' || lunging,
     );
   }
   if (world.fighters.every(isAttached))
@@ -293,23 +279,21 @@ export function stepWorld(world, actions = [{}, {}]) {
   for (let index = 0; index < 2; index++) {
     const fighter = world.fighters[index];
     if (
-      fighter.phase === "webrelease" &&
+      fighter.phase === 'webrelease' &&
       fighter.phaseTicks === 0 &&
       world.fighters.every(isAttached)
     )
-      world.projectiles.push(
-        launchWeb(fighter, world.fighters[1 - index], index),
-      );
+      world.projectiles.push(launchWeb(fighter, world.fighters[1 - index], index));
   }
   const webHits = advanceWebs(world, previous);
   // A net that arrives this tick interrupts windup/active attacks before bite
   // resolution. Ordinary bite trades still use the original shared snapshot.
   for (const hit of webHits) {
     const target = world.fighters[hit.target];
-    if (target.hp <= 0 || target.phase === "ko") continue;
+    if (target.hp <= 0 || target.phase === 'ko') continue;
     target.velocity = 0;
     target.dashRemaining = 0;
-    enter(target, "webstun");
+    enter(target, 'webstun');
     target.pose = fighterPose(target);
   }
   // Gather against one snapshot before applying cancellations or health changes.
@@ -317,11 +301,11 @@ export function stepWorld(world, actions = [{}, {}]) {
   for (let index = 0; index < 2; index++) {
     const fighter = world.fighters[index];
     if (
-      !["active", "lungeactive"].includes(fighter.phase) ||
+      !['active', 'lungeactive'].includes(fighter.phase) ||
       fighter.attackHit ||
       !world.fighters.every(isAttached) ||
       !previous.every((f) => f.attached) ||
-      !sameStick(world.fighters[0].x, world.fighters[1].x, world.stage)
+      !sameStick(world.fighters[0], world.fighters[1], world.stage)
     )
       continue;
     const contact = biteContact(
@@ -332,11 +316,10 @@ export function stepWorld(world, actions = [{}, {}]) {
     );
     if (contact)
       hits.push({
-        type: "hit",
+        type: 'hit',
         source: index,
         target: 1 - index,
-        damage:
-          fighter.phase === "lungeactive" ? COMBAT.lungeDamage : COMBAT.damage,
+        damage: fighter.phase === 'lungeactive' ? COMBAT.lungeDamage : COMBAT.damage,
         attackId: fighter.attackId,
         contact,
       });
@@ -359,7 +342,7 @@ export function stepWorld(world, actions = [{}, {}]) {
     target.velocity = 0;
     target.dashRemaining = 0;
     target.hitTick = world.tick;
-    enter(target, target.hp ? "hitstun" : "ko");
+    enter(target, target.hp ? 'hitstun' : 'ko');
   }
   const groundHits = [];
   world.fighters.forEach((fighter, index) => {
@@ -371,20 +354,20 @@ export function stepWorld(world, actions = [{}, {}]) {
     fighter.air.groundTicks = landed ? 0 : (fighter.air.groundTicks ?? 0) + 1;
     const damage = landed
       ? COMBAT.groundDamage
-      : fighter.air.groundTicks > 0 &&
-          fighter.air.groundTicks % COMBAT.groundInterval === 0
+      : fighter.air.groundTicks > 0 && fighter.air.groundTicks % COMBAT.groundInterval === 0
         ? COMBAT.groundBurn
         : 0;
     if (!damage) return;
     fighter.hp = Math.max(0, fighter.hp - damage);
     fighter.hitTick = world.tick;
-    if (!fighter.hp) enter(fighter, "ko");
-    groundHits.push({ type: "groundhit", target: index, damage });
+    if (!fighter.hp) enter(fighter, 'ko');
+    groundHits.push({ type: 'groundhit', target: index, damage });
   });
   world.events = [...webHits, ...hits, ...groundHits];
-  if (world.fighters.some((fighter) => !fighter.hp)) endRound(world, "ko");
-  else if (!world.remainingTicks) endRound(world, "timeout");
+  if (world.fighters.some((fighter) => !fighter.hp)) endRound(world, 'ko');
+  else if (!world.remainingTicks) endRound(world, 'timeout');
   for (const fighter of world.fighters)
-    if (!["idle", "ko"].includes(fighter.phase)) fighter.phaseTicks++;
+    if (!['idle', 'ko'].includes(fighter.phase)) fighter.phaseTicks++;
+  advanceIdle(world, actions, world.hitstop > 0);
   return world;
 }

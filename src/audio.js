@@ -14,25 +14,15 @@ export function createGameAudio({
     }
     active.clear();
   }
-  function tone(
-    frequency,
-    end,
-    duration,
-    delay = 0,
-    type = "sine",
-    volume = 0.06,
-  ) {
-    if (!context || context.state !== "running" || muted) return;
+  function tone(frequency, end, duration, delay = 0, type = 'sine', volume = 0.06) {
+    if (!context || context.state !== 'running' || muted) return;
     try {
       const oscillator = context.createOscillator(),
         gain = context.createGain();
       const start = context.currentTime + delay;
       oscillator.type = type;
       oscillator.frequency.setValueAtTime(frequency, start);
-      oscillator.frequency.exponentialRampToValueAtTime(
-        Math.max(1, end),
-        start + duration,
-      );
+      oscillator.frequency.exponentialRampToValueAtTime(Math.max(1, end), start + duration);
       gain.gain.setValueAtTime(0, start);
       gain.gain.linearRampToValueAtTime(volume, start + 0.005);
       gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
@@ -51,14 +41,14 @@ export function createGameAudio({
     }
   }
   function cue(kind) {
-    if (kind === "bite") tone(700, 180, 0.065, 0, "triangle", 0.035);
-    if (kind === "web") tone(1300, 280, 0.14, 0, "sine", 0.04);
-    if (kind === "hit") tone(130, 42, 0.15, 0, "triangle", 0.09);
-    if (kind === "stun") tone(460, 800, 0.12, 0, "sine", 0.035);
-    if (kind === "lunge") tone(230, 700, 0.12, 0, "triangle", 0.025);
-    if (kind === "ground") tone(85, 25, 0.2, 0, "triangle", 0.075);
-    if (kind === "grip") tone(480, 260, 0.07, 0, "sine", 0.02);
-    if (kind === "end") {
+    if (kind === 'bite') tone(700, 180, 0.065, 0, 'triangle', 0.035);
+    if (kind === 'web') tone(1300, 280, 0.14, 0, 'sine', 0.04);
+    if (kind === 'hit') tone(130, 42, 0.15, 0, 'triangle', 0.09);
+    if (kind === 'stun') tone(460, 800, 0.12, 0, 'sine', 0.035);
+    if (kind === 'lunge') tone(230, 700, 0.12, 0, 'triangle', 0.025);
+    if (kind === 'ground') tone(85, 25, 0.2, 0, 'triangle', 0.075);
+    if (kind === 'grip') tone(480, 260, 0.07, 0, 'sine', 0.02);
+    if (kind === 'end') {
       tone(330, 330, 0.2);
       tone(440, 440, 0.25, 0.15);
       tone(660, 660, 0.35, 0.3);
@@ -98,30 +88,24 @@ export function createGameAudio({
       if (previous && current.tick >= previous.tick && !paused) {
         current.fighters.forEach((fighter, index) => {
           const before = previous.fighters[index];
-          if (fighter.hp < before.hp) cue("hit");
+          if (fighter.hp < before.hp) cue('hit');
           if (
-            fighter.phase === "active" &&
-            (before.phase !== "active" || fighter.attackId !== before.attackId)
+            fighter.phase === 'active' &&
+            (before.phase !== 'active' || fighter.attackId !== before.attackId)
           )
-            cue("bite");
+            cue('bite');
           if (
-            fighter.phase === "webrelease" &&
-            (before.phase !== "webrelease" || fighter.webId !== before.webId)
+            fighter.phase === 'webrelease' &&
+            (before.phase !== 'webrelease' || fighter.webId !== before.webId)
           )
-            cue("web");
-          if (fighter.air === "deploying" && before.air !== "deploying")
-            cue("web");
-          if (fighter.phase === "webstun" && before.phase !== "webstun")
-            cue("stun");
-          if (fighter.phase === "lungeactive" && before.phase !== "lungeactive")
-            cue("lunge");
-          if (fighter.air === "grounded" && before.air !== "grounded")
-            cue("ground");
-          if (fighter.air === "attached" && before.air !== "attached")
-            cue("grip");
+            cue('web');
+          if (fighter.air === 'deploying' && before.air !== 'deploying') cue('web');
+          if (fighter.phase === 'webstun' && before.phase !== 'webstun') cue('stun');
+          if (fighter.phase === 'lungeactive' && before.phase !== 'lungeactive') cue('lunge');
+          if (fighter.air === 'grounded' && before.air !== 'grounded') cue('ground');
+          if (fighter.air === 'attached' && before.air !== 'attached') cue('grip');
         });
-        if (current.status === "ended" && previous.status !== "ended")
-          cue("end");
+        if (current.status === 'ended' && previous.status !== 'ended') cue('end');
       }
       if (paused) silence();
       previous = current;

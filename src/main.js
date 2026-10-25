@@ -324,7 +324,7 @@ renderer.setAnimationLoop(time => {
   const shown = renderFighters(world, alpha);
   for (const rig of rigs) {
     const { x, fighter } = shown[rig.index];
-    rig.update(x, fighter); silks[rig.index].update(rig, fighter);
+    rig.update(x, matchStarted ? fighter : { ...fighter, idleBounce: undefined }); silks[rig.index].update(rig, fighter);
   }
   webEffects.update(world, shown.map(item => item.fighter), alpha);
   const delta = previousFrame === null ? 0 : Math.min(0.1, (time - previousFrame) / 1000); previousFrame = time;

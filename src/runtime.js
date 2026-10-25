@@ -54,6 +54,7 @@ function sampleAction(controls, tickTime) {
   const action = { direction: controls.direction };
   while (controls.inputs.length && controls.inputs[0].at <= tickTime + 1e-7) {
     const input = controls.inputs.shift();
+    action.activity = true;
     if (input.kind === 'direction') controls.direction = action.direction = input.value;
     else action[input.kind] = true;
   }

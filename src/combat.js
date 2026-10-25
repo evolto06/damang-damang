@@ -3,12 +3,13 @@ import { bitePose, biteContact, mixPose, BITE_CENTER_REACH } from './bite-profil
 import { WEB, webPose, launchWeb, advanceWebs } from './web-attack.js';
 import { createAir, isAttached, releaseStick, advanceAerial } from './aerial.js';
 import { getStage, sameStick } from './stage.js';
+import { createIdle, advanceIdle } from './idle-pose.js';
 
 export const COMBAT = Object.freeze({ tickRate: 60, windup: 18, active: 6, recovery: 21, hitstun: 11, hitstop: 6, maxHealth: 100, damage: 20, reach: BITE_CENTER_REACH - RULES.separation, knockback: 0.25, knockOffSpeed: 2.5, roundTicks: 60 * 60 });
 export const clearGap = world => Math.max(0, Math.abs(world.fighters[1].x - world.fighters[0].x) - RULES.separation);
 
 function createFighter(id, x, forward, stage) {
-  return { ...createMover(x, forward), id, stage, hp: COMBAT.maxHealth, air: createAir(), phase: 'idle', phaseTicks: 0, pose: bitePose('idle'), webCooldown: 0, webId: 0, attackId: 0, attackHit: false, hitTick: -1000 };
+  return { ...createMover(x, forward), id, stage, idleBounce: createIdle(), hp: COMBAT.maxHealth, air: createAir(), phase: 'idle', phaseTicks: 0, pose: bitePose('idle'), webCooldown: 0, webId: 0, attackId: 0, attackHit: false, hitTick: -1000 };
 }
 export function createWorld(stageId = 'single') {
   const stage = getStage(stageId);
@@ -61,6 +62,7 @@ export function stepWorld(world, actions = [{}, {}]) {
       world.recoil = [0, 0]; world.impact = null;
     }
     if (!world.remainingTicks) endRound(world, 'timeout');
+    advanceIdle(world, actions, true);
     return world;
   }
   faceOpponent(world);
@@ -132,5 +134,6 @@ export function stepWorld(world, actions = [{}, {}]) {
   if (world.fighters.some(fighter => !fighter.hp)) endRound(world, 'ko');
   else if (!world.remainingTicks) endRound(world, 'timeout');
   for (const fighter of world.fighters) if (!['idle', 'ko'].includes(fighter.phase)) fighter.phaseTicks++;
+  advanceIdle(world, actions, world.hitstop > 0);
   return world;
 }

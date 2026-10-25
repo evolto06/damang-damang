@@ -6,6 +6,7 @@ import { WEB, webPose } from './web-attack.js';
 import { AIR } from './aerial.js';
 import { RULES } from './movement.js';
 import { hangingPose } from './hanging-pose.js';
+import { idlePose } from './idle-pose.js';
 
 export const PLAYER_TINTS = Object.freeze(['#efc26f', '#a7d9d5']);
 
@@ -150,7 +151,8 @@ function updateSpiderRig(rig, x, fighter) {
   rig.material.emissiveIntensity = phase === 'active' ? 0.65 : phase === 'hitstun' ? 0.8 : 0.35;
   const pose = fighter?.pose ?? { ...bitePose(phase, ticks), ...webPose(phase, ticks) };
   const webStand = pose.webStand ?? 0, webCurl = pose.webCurl ?? 0;
-  rig.torso.position.y = WEB.rise * webStand; rig.abdomen.rotation.x = WEB.curl * webCurl;
+  const idle = idlePose(fighter);
+  rig.torso.position.y = WEB.rise * webStand + idle.lift; rig.abdomen.rotation.x = WEB.curl * webCurl;
   for (const joint of rig.jaws) { joint.jaw.rotation.x = pose.jaw; joint.fang.rotation.x = pose.fang; }
   const rear = pose.rear ?? 0, strike = pose.strike ?? 0;
   const hang = hangingPose(fighter, forward);
@@ -173,7 +175,8 @@ function updateSpiderRig(rig, x, fighter) {
   const neutralOutlet = outlet.clone().applyAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI);
   rig.inverted.position.copy(neutralOutlet).sub(outlet.applyQuaternion(rig.inverted.quaternion));
   rig.inverted.position.y += ATTACHMENT.offsetY;
-  if (!turned && rig.lastX === x && rig.lastAirBlend === airBlend && rig.lastRear === rear && rig.lastStrike === strike && rig.lastWebStand === webStand && rig.lastWebCurl === webCurl && rig.lastHangPhase === hang.phase && rig.lastHangMotion === hang.motion && rig.lastHangClimb === hang.climb && rig.lastHangDrift === hang.drift) return;
+  if (!turned && rig.lastX === x && rig.lastAirBlend === airBlend && rig.lastRear === rear && rig.lastStrike === strike && rig.lastWebStand === webStand && rig.lastWebCurl === webCurl && rig.lastHangPhase === hang.phase && rig.lastHangMotion === hang.motion && rig.lastHangClimb === hang.climb && rig.lastHangDrift === hang.drift && rig.lastIdleLift === idle.lift && rig.lastIdleBlend === idle.blend) return;
+  rig.lastIdleLift = idle.lift; rig.lastIdleBlend = idle.blend;
   rig.lastHangPhase = hang.phase; rig.lastHangMotion = hang.motion; rig.lastHangClimb = hang.climb; rig.lastHangDrift = hang.drift;
   rig.lastWebStand = webStand; rig.lastWebCurl = webCurl;
   rig.lastX = x; rig.lastAirBlend = airBlend; rig.lastRear = rear; rig.lastStrike = strike;
@@ -185,11 +188,11 @@ function updateSpiderRig(rig, x, fighter) {
     // The rear two pairs brace on the twig while the front two pairs attack.
     const attacking = rear + strike > 1e-8;
     const braced = (attacking && leg.number >= 2) || webStand > 0;
-    const radius = STICK.radius + 0.007 + (braced ? 0 : cycle.lift);
+    const radius = STICK.radius + 0.007 + (braced ? 0 : cycle.lift * (1 - idle.blend));
     const contactY = radius * 0.55, contactSide = radius * Math.sqrt(1 - 0.55 ** 2);
     const toe = new THREE.Vector3(leg.side * contactSide / scale, -(contactY - ATTACHMENT.offsetY) / scale,
       leg.hip.z + [0.7, 0.35, -0.4, -0.9][leg.number] + rig.forward * cycle.relativeX / scale);
-    const h = leg.hip.clone(); h.y += WEB.rise * webStand;
+    const h = leg.hip.clone(); h.y += WEB.rise * webStand + idle.lift;
     const s = leg.side, z = toe.z;
     const points = [
       h,
@@ -201,6 +204,9 @@ function updateSpiderRig(rig, x, fighter) {
       new THREE.Vector3(s * 0.43, toe.y - 0.08, z),
       toe,
     ];
+    // Flex the proximal joints with the body, keeping every distal grip fixed.
+    points[1].y -= idle.lift / 7; // this joint already inherits the lifted hip
+    for (let joint = 2; joint < 7; joint++) points[joint].y += idle.lift * (1 - joint / 7);
     if (webStand > 0) {
       points[2].y += 0.8 * webStand; points[2].x += s * 0.18 * webStand;
       points[3].y += 0.45 * webStand; points[3].x += s * 0.2 * webStand;
@@ -283,7 +289,7 @@ function updateSpiderRig(rig, x, fighter) {
       const n = vertexNormal.fromArray(leg.originalNormals, i * 3).applyQuaternion(q); normals.setXYZ(i, n.x, n.y, n.z);
     }
     positions.needsUpdate = true; normals.needsUpdate = true;
-    leg.contact.copy(posedToe); leg.stance = airBlend === 0 && (braced || (cycle.stance && !(attacking && leg.number < 2)));
+    leg.contact.copy(posedToe); leg.stance = airBlend === 0 && (braced || idle.blend === 1 || (cycle.stance && !(attacking && leg.number < 2)));
   }
 }
 export function inspectRig(rig) {

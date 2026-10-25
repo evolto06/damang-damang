@@ -236,7 +236,7 @@ test('a second Web press transfers a low return onto the higher stick', async ({
         t.dropped = true;
         press('KeyS');
       }
-      if (!t.firstCast && f.air.mode === 'falling' && f.air.ticks >= 25) {
+      if (!t.firstCast && f.air.mode === 'falling' && f.air.ticks >= 20) {
         t.firstCast = true;
         press('KeyW');
       }

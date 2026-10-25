@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { createWorld, stepWorld } from '../src/combat.js';
 import { isAttached, getSilkCastTarget } from '../src/aerial.js';
 import { fightFeedback, hintsFor } from '../src/feedback.js';
+import { hangingPose } from '../src/hanging-pose.js';
 
 test('a fresh web press during a low return can cast onto a higher twig and finish there', () => {
   for (const [stage, lowerIndex, upperIndex, direction] of [
@@ -65,6 +66,8 @@ test('a height-blocked powered return offers a higher cast and preserves its upw
     vy: 2.6,
     blocked: true,
     blockReason: 'height',
+    animationTicks: 60,
+    retrievalTicks: 24,
   });
   const feedback = fightFeedback({ world, ready: true, paused: false, mode: 'pvp' });
   assert.equal(feedback.actions.web.disabled, false);
@@ -73,6 +76,11 @@ test('a height-blocked powered return offers a higher cast and preserves its upw
   stepWorld(world, [{ web: true, direction: 1 }, {}]);
   assert.equal(fighter.air.mode, 'deploying');
   assert.equal(fighter.air.targetY, 0.9);
+  assert.equal(
+    hangingPose(fighter).upright,
+    0,
+    'recasting preserves an already inverted return pose',
+  );
   for (let tick = 0; tick < 4; tick++) stepWorld(world, [{ direction: 1 }, {}]);
   assert.ok(fighter.air.y > -0.9, 'the new deployment does not retain the old release-height cap');
   for (let tick = 0; tick < 700 && !isAttached(fighter); tick++)

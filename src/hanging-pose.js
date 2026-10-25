@@ -29,8 +29,7 @@ export function hangingPose(fighter, forward = fighter?.forward ?? 1) {
   const suspended = ['deploying', 'swinging', 'reeling', 'reattaching'].includes(air.mode);
   // Rotation adds height to the silhouette. Keep the calibrated folded envelope
   // near the floor and below an opponent, and settle before the final twig grip.
-  const clearance =
-    smooth(((air.targetY ?? 0) - air.y - 0.65) / 0.35) * smooth((air.y - AIR.groundY - 0.35) / 0.5);
+  const clearance = smooth((-air.y - 0.65) / 0.35) * smooth((air.y - AIR.groundY - 0.35) / 0.5);
   const phase = age * 0.14;
   const drift = clamp((air.vx * forward) / AIR.maxSwingSpeed, -1, 1);
   const offset = outletOffset({ forward });
@@ -46,8 +45,10 @@ export function hangingPose(fighter, forward = fighter?.forward ?? 1) {
     air.mode === 'reeling' && !air.blocked
       ? smooth(air.ticks / 10) * clamp(air.vy / AIR.reelSpeed, 0, 1)
       : 0;
-  const retrieving = ['deploying', 'swinging', 'reeling', 'reattaching'].includes(air.mode);
-  const upright =
-    smooth(age / 18) * (retrieving ? smooth(((air.targetY ?? 0) - air.y - 0.3) / 0.9) : 1);
+  const retrieving = suspended;
+  const castAge = Math.max(0, age - (air.retrievalTicks ?? 0));
+  const upright = retrieving
+    ? smooth(castAge / 18) * (1 - smooth((air.retrievalTicks ?? 0) / 18))
+    : smooth(age / 18);
   return { blend, upright, pitch, phase, motion, climb, drift };
 }

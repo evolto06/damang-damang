@@ -5,7 +5,7 @@ as the priority. Work started from `cc33a60`, which already contained many revie
 fixes. This document records code coverage; it does not close GitHub issues or
 claim subjective playtest approval.
 
-Verified locally on 2026-10-25: 151 unit tests, 32 Chromium browser scenarios,
+Verified locally on 2026-10-25: 154 unit tests, 36 Chromium browser scenarios,
 Prettier check, production build and nested deployment HTTP check all pass.
 The browser matrix includes 1366×768, 1024×600, 844×390 and 390×844, virtual
 controller routing/menu navigation, model failure and pre-module boot failure.
@@ -14,7 +14,7 @@ the complete branch-protection configuration remain unverified.
 
 | Issue | Implementation | Evidence / remaining acceptance |
 | --- | --- | --- |
-| #1 Swing physics | Momentum-preserving cast, pendulum pumping/braking, eased winch, directional blocked-climb hint; simultaneous aerial updates use the same snapshot. A free swing can rise above its anchor's twig height without the winch cutting the arc short. The attached opponent can reposition or lunge during a return, within twig bounds. | Aerial, real run/drop/cast overshoot, crossing, recovery movement and fixed-render-rate tests; confirm feel in QA. |
+| #1 Swing physics | Momentum-preserving cast, pendulum pumping/braking, eased winch, directional blocked-climb hint; simultaneous aerial updates use the same snapshot. A free swing can rise above its anchor's twig height. A fresh Web press during a return can cast onto a nearby higher twig and finish there; UI prompts and buttons share the simulation gate. The attached opponent can reposition or lunge during a return, within twig bounds. | Aerial, real run/drop/cast overshoot, low-to-high recasts for both players, crossing, recovery movement and fixed-render-rate tests; confirm feel in QA. |
 | #2 Holder and background | Jointed fingers, knuckles, nails, cuff, shadowed limbs, window trim, striped shop awning and wider street coverage. Each twig has a holder, including the Terraces center. | Scene and holder-clearance tests; subjective art approval remains. |
 | #3 Lunge combat | 26-tick startup, nine-tick moving strike, 30 damage and 36-tick recovery. Active lunges evade webs; the faster close-range bite wins simultaneous starts and punishes missed lunges. | Combat, lunge, controller and render-rate tests; balance playtest remains. |
 | #4 HUD | Distinct fighter tints/markers, nearby per-player hints, readable fallback, damage numbers, health flash, bounded camera shake, touch cues, delayed result, return to menu. | Hint tests and browser viewport checks; device readability check remains. |

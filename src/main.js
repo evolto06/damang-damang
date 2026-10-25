@@ -750,7 +750,12 @@ renderer.setAnimationLoop((time) => {
   camera.updateMatrixWorld();
   const feedback = fightFeedback(runtime);
   const coaching =
-    matchStarted && !runtime.paused && !dialog && world.status === 'playing'
+    matchStarted &&
+    !runtime.paused &&
+    !dialog &&
+    world.status === 'playing' &&
+    world.fighters[0].air.mode === 'attached' &&
+    world.fighters[0].phase === 'idle'
       ? coachingHint(runtime.coaching, keysFor(runtime.mode, 0, inputSources[0]))
       : null;
   $('#coaching-panel').hidden = !coaching;

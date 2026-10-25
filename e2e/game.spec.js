@@ -198,12 +198,74 @@ test('stepped arena and first-match coaching survive menu transitions and a relo
   const first = await state(page);
   expect(first.series.wins).toEqual([0, 0]);
   expect(first.fighters.map((f) => f.air.y)).toEqual([-0.9, 0.9]);
+  await page.keyboard.press('s');
+  await expect(page.locator('#coaching-panel')).toBeHidden();
+  await expect(page.locator('#fight-prompt')).toContainText('return');
+  await page.keyboard.press('c');
+  await expect.poll(async () => (await state(page)).fighters[0].air.mode).toBe('attached');
+  await expect(page.locator('#coaching-panel')).toBeVisible();
   await page.locator('#skip-coaching').click();
   await expect(page.locator('#coaching-panel')).toBeHidden();
   await page.reload();
   await expect(page.locator('#start-bot')).toBeEnabled();
   await expect(page.locator('#coaching-choice')).not.toBeChecked();
   expect(errors).toEqual([]);
+});
+
+test('a second Web press transfers a low return onto the higher stick', async ({ page }) => {
+  await ready(page);
+  await page.locator('#stage-choice').selectOption('heights');
+  await page.locator('#start-pvp').click();
+  await page.evaluate(() => {
+    window.__transfer = {
+      dropped: false,
+      firstCast: false,
+      low: false,
+      recast: false,
+      high: false,
+      prompt: '',
+    };
+    const press = (code) => {
+      for (const type of ['keydown', 'keyup'])
+        window.dispatchEvent(new KeyboardEvent(type, { code, bubbles: true, cancelable: true }));
+    };
+    const observe = () => {
+      const f = window.__spiderDerby.getState().fighters[0],
+        t = window.__transfer;
+      if (!t.dropped && f.x > -1.4 && f.air.mode === 'attached') {
+        t.dropped = true;
+        press('KeyS');
+      }
+      if (!t.firstCast && f.air.mode === 'falling' && f.air.ticks >= 25) {
+        t.firstCast = true;
+        press('KeyW');
+      }
+      if (['swinging', 'reeling'].includes(f.air.mode) && f.air.targetY === -0.9) {
+        t.low = true;
+        if (!t.recast && !document.getElementById('web').disabled) {
+          t.prompt = document.getElementById('fight-prompt').textContent;
+          t.recast = true;
+          press('KeyW');
+        }
+      }
+      if (t.recast && f.air.targetY === 0.9) {
+        t.high = true;
+        window.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyD', bubbles: true }));
+      }
+      requestAnimationFrame(observe);
+    };
+    observe();
+  });
+  await page.keyboard.down('d');
+  await expect.poll(() => page.evaluate(() => window.__transfer.high)).toBe(true);
+  expect(await page.evaluate(() => window.__transfer.prompt)).toContain('W casts a new silk line');
+  await expect
+    .poll(async () => {
+      const f = (await state(page)).fighters[0];
+      return [f.air.mode, f.air.y];
+    })
+    .toEqual(['attached', 0.9]);
+  await page.keyboard.up('d');
 });
 
 test('a missing model exposes a reload action', async ({ page }) => {

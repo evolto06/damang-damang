@@ -13,6 +13,7 @@ export const AIR = Object.freeze({
   stickLeft: -6.7 * MAP_SCALE,
   stickRight: 7.7 * MAP_SCALE,
   deployTicks: 6,
+  recastReach: 1.5,
   swingTicks: 120,
   swingMinTicks: 30,
   reattachTicks: 18,
@@ -86,6 +87,30 @@ export function outletOffset(fighter) {
     BITE.offsetY - AIR.outlet[1] * BITE.scale,
     fighter.forward * AIR.outlet[0] * BITE.scale,
   ];
+}
+// A second press can move the return onto a nearby higher rail. Keeping the
+// target above both the outlet and old anchor prevents same-rail cast spam.
+export function getSilkCastTarget(fighter) {
+  const air = fighter.air,
+    offset = outletOffset(fighter);
+  const x = fighter.x + offset[0],
+    y = air.y + offset[1];
+  if (['falling', 'grounded'].includes(air.mode)) return silkTarget(x, y, fighter.stage);
+  if (!['swinging', 'reeling'].includes(air.mode)) return null;
+  const gap = (stick) => Math.abs(x - clamp(x, ...stick.body));
+  return getStage(fighter.stage)
+    .sticks.filter(
+      (stick) => stick.y > Math.max(y, air.targetY) + 0.05 && gap(stick) <= AIR.recastReach,
+    )
+    .reduce(
+      (best, stick) =>
+        !best ||
+        gap(stick) < gap(best) - 1e-9 ||
+        (Math.abs(gap(stick) - gap(best)) < 1e-9 && stick.y < best.y)
+          ? stick
+          : best,
+      null,
+    );
 }
 export function silkEndpoints(fighter) {
   const offset = outletOffset(fighter),
@@ -275,9 +300,9 @@ export function advanceAerial(fighter, other, index, action) {
   fighter.cooldown = Math.max(0, fighter.cooldown - DT);
   const offset = outletOffset(fighter);
   const direction = Number.isFinite(action.direction) ? Math.sign(action.direction) : 0;
-  if (action.web && ['falling', 'grounded'].includes(air.mode)) {
-    const target = silkTarget(fighter.x + offset[0], air.y + offset[1], fighter.stage);
-    if (!target) return true;
+  const castTarget = action.web ? getSilkCastTarget(fighter) : null;
+  if (castTarget) {
+    const target = castTarget;
     air.mode = 'deploying';
     air.ticks = 0;
     // Silk is fired from the spinneret at the moment of the cast, so the anchor
@@ -344,7 +369,7 @@ export function advanceAerial(fighter, other, index, action) {
     const x = fighter.x + air.vx * DT;
     fighter.x = legalX(fighter, other, index, x);
     if (fighter.x !== x) air.vx = 0;
-    air.y = Math.max(AIR.groundY, Math.min(air.releaseY - 0.001, air.y + air.vy * DT));
+    air.y = Math.max(AIR.groundY, air.y + air.vy * DT);
     if (air.y === AIR.groundY) {
       air.vy = 0;
       if (air.mode === 'falling') {

@@ -21,6 +21,9 @@ human playtesting. Report the arena, match mode, device, and steps for any probl
    On a raised arena, run toward a gap, drop and cast soon while still steering.
    A strong swing can rise above the webbed twig before returning; check for a
    smooth arc rather than an invisible ceiling or a sudden downward snap.
+   Start a return tied to the lower twig, steer toward the higher twig and press
+   Web again when “Cast higher” appears (C in Bot Match; W for PvP P1, ↑ for P2).
+   Confirm a new silk line fires and the final grip reaches the higher twig.
 3. **Arenas.** Try One stick, Twin sticks, Stepped sticks and Terraces. At a gap, drop toward the
    other side, fall for about half a second, then cast. The bot can follow. Try
    crossing from both heights, returning under an opponent, and following the

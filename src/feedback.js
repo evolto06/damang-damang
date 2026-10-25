@@ -1,4 +1,4 @@
-import { isAttached } from './aerial.js';
+import { isAttached, getSilkCastTarget } from './aerial.js';
 import { COMBAT, clearGap } from './combat.js';
 import { sameStick, stickAt } from './stage.js';
 
@@ -101,6 +101,8 @@ export function hintsFor(world, index = 0, mode = 'bot', input = 'keyboard') {
   });
   if (world.status !== 'playing' || fighter.hp <= 0 || world.hitstop > 0) return [];
   if (!isAttached(fighter)) {
+    if (['swinging', 'reeling'].includes(fighter.air.mode) && getSilkCastTarget(fighter))
+      return [hint('web', 'Cast higher'), hint('move', 'Steer')];
     if (fighter.air.blocked) return [hint('move', 'Clear', clearLabel(fighter, keys))];
     if (['falling', 'grounded'].includes(fighter.air.mode)) return [hint('web', 'Return')];
     if (['swinging', 'reeling'].includes(fighter.air.mode)) return [hint('move', 'Steer')];
@@ -151,7 +153,8 @@ export function fightFeedback(runtime, index = 0) {
   const cooling = player.cooldown > 1e-8;
   const dashReason =
     stickReason || (cooling ? `Wait ${(Math.ceil(player.cooldown * 10) / 10).toFixed(1)}s` : '');
-  const canWeb = ['falling', 'grounded'].includes(player.air.mode);
+  const canWeb = !!getSilkCastTarget(player);
+  const canRecast = canWeb && ['swinging', 'reeling'].includes(player.air.mode);
   const webReason =
     frozen || (!canWeb ? (attached ? 'Drop first' : airLabels[player.air.mode]) : '');
   const shootReason =
@@ -163,11 +166,13 @@ export function fightFeedback(runtime, index = 0) {
   else if (!ready) prompt = 'Preparing the spiders · Controls unlock when loading finishes.';
   else if (world.hitstop > 0) prompt = 'Contact · Brief impact hold; actions resume automatically.';
   else if (!attached)
-    prompt = player.air.blocked
-      ? player.air.blockReason === 'height'
-        ? `Twig too high · Steer ${clearLabel(player, keys)} back beneath your silk anchor.`
-        : `${opponentName} above · Steer ${clearLabel(player, keys)} to clear them and keep climbing.`
-      : returnPrompt(player, keys);
+    prompt = canRecast
+      ? `Higher twig in reach · ${keys.web} casts a new silk line; ${keys.move} steers toward it.`
+      : player.air.blocked
+        ? player.air.blockReason === 'height'
+          ? `Twig too high · Steer ${clearLabel(player, keys)} back beneath your silk anchor.`
+          : `${opponentName} above · Steer ${clearLabel(player, keys)} to clear them and keep climbing.`
+        : returnPrompt(player, keys);
   else if (player.phase === 'webstun') prompt = 'Web stunned · Briefly trapped; wait to recover.';
   else if (player.phase === 'webwindup')
     prompt = 'Web windup · Stand tall and curl the abdomen forward.';
@@ -208,7 +213,10 @@ export function fightFeedback(runtime, index = 0) {
       bite: { disabled: !!attackReason, caption: attackReason || keys.bite },
       dash: { disabled: !!dashReason, caption: dashReason || keys.dash },
       drop: { disabled: !!dropReason, caption: dropReason || keys.drop },
-      web: { disabled: !!webReason, caption: webReason || keys.web },
+      web: {
+        disabled: !!webReason,
+        caption: webReason || (canRecast ? `${keys.web} · HIGHER` : keys.web),
+      },
     },
     movementDisabled:
       !!frozen ||

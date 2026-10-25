@@ -34,6 +34,8 @@ Move close enough to bite, or shoot a web to briefly stun the opponent. Drop or 
 
 Stepped sticks is a two-stick uphill/downhill crossing. Terraces has two raised starting perches around a lower center fighting stick; chase across two gaps, or meet in the middle.
 
+During a silk return, steer toward a higher stick. When “Cast higher” appears, press Silk return again to fire a new line and climb to that stick.
+
 ## Build and checks
 
 ```sh

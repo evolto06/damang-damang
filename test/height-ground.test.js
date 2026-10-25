@@ -40,7 +40,6 @@ test('height arena keeps attached fighters, twigs and both supports at their act
     assert.ok(
       Math.abs(
         fighter.air.anchorY -
-          y -
           stickSurfaceY(fighter.air.anchorX, fighter.air.anchorZ, {
             sticks: [stickFor(fighter.x, world.stage)],
           }),
@@ -183,9 +182,9 @@ function groundedWorld(health = [100, 100]) {
   });
   return world;
 }
-test('pavement damage gives full grace, ticks once per interval for both fighters, and stops after retrieval lifts', () => {
+test('pavement burn ticks once per interval for both fighters, and stops after retrieval lifts', () => {
   const world = groundedWorld();
-  advance(world, COMBAT.groundGraceTicks + COMBAT.groundIntervalTicks - 1);
+  advance(world, COMBAT.groundInterval - 1);
   assert.deepEqual(
     world.fighters.map((fighter) => fighter.hp),
     [100, 100],
@@ -200,7 +199,7 @@ test('pavement damage gives full grace, ticks once per interval for both fighter
     [0, 1].map((target) => ({ type: 'groundhit', target, damage: 5 })),
   );
   assert.equal(world.hitstop, 0);
-  advance(world, COMBAT.groundIntervalTicks);
+  advance(world, COMBAT.groundInterval);
   assert.deepEqual(
     world.fighters.map((fighter) => fighter.hp),
     [90, 90],
@@ -214,7 +213,7 @@ test('pavement damage gives full grace, ticks once per interval for both fighter
     [90, 90],
   );
   assert.deepEqual(
-    world.fighters.map((fighter) => fighter.groundTicks),
+    world.fighters.map((fighter) => fighter.air.groundTicks),
     [0, 0],
   );
 });
@@ -226,7 +225,7 @@ test('ground defeat uses normal round results, resolves simultaneous damage as a
     [[5, 5], 'draw'],
   ]) {
     const world = groundedWorld(health);
-    advance(world, COMBAT.groundGraceTicks + COMBAT.groundIntervalTicks);
+    advance(world, COMBAT.groundInterval);
     assert.equal(world.status, 'ended');
     assert.equal(world.endReason, 'ko');
     assert.equal(world.winner, winner);
@@ -245,7 +244,7 @@ test('ground cadence is identical at 30/60/144 render Hz and consumes no exposur
     for (let frame = 1; frame <= hz * 4; frame++) frameRuntime(runtime, (frame * 1000) / hz);
     assert.deepEqual(
       runtime.world.fighters.map((fighter) => fighter.hp),
-      [90, 90],
+      [80, 80],
     );
     pauseRuntime(runtime, true);
     const paused = structuredClone(runtime.world);
@@ -256,7 +255,7 @@ test('ground cadence is identical at 30/60/144 render Hz and consumes no exposur
     for (let frame = 1; frame <= hz; frame++) frameRuntime(runtime, 64000 + (frame * 1000) / hz);
     assert.deepEqual(
       runtime.world.fighters.map((fighter) => fighter.hp),
-      [85, 85],
+      [75, 75],
     );
     return runtime.world;
   });

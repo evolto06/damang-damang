@@ -33,12 +33,20 @@ test('AI approaches into clear-gap range without dashing or mutating the world',
   const world = createWorld();
   world.tick = AI_RULES.initialWait;
   const before = structuredClone(world);
-  assert.deepEqual(decideAI(createAI(), world), { direction: -1, bite: false, dash: false });
+  assert.deepEqual(decideAI(createAI(), world), {
+    direction: -1,
+    bite: false,
+    dash: false,
+  });
   assert.deepEqual(world, before);
   world.fighters[1].x = world.fighters[0].x + RULES.separation + COMBAT.reach + 0.01;
   assert.equal(decideAI(createAI(), world).bite, false);
   inRange(world);
-  assert.deepEqual(decideAI(createAI(), world), { direction: 0, bite: true, dash: false });
+  assert.deepEqual(decideAI(createAI(), world), {
+    direction: 0,
+    bite: true,
+    dash: false,
+  });
 });
 
 test('AI cannot act through attack, hitstun, dash, KO, or ended rounds', () => {
@@ -162,7 +170,11 @@ test('another aerial interruption restarts grace before movement as well as bite
   world.tick = 321;
   world.fighters[0].air.mode = 'attached';
   for (; world.tick < 351; world.tick++) assert.deepEqual(decideAI(ai, world), neutral);
-  assert.deepEqual(decideAI(ai, world), { direction: -1, bite: false, dash: false });
+  assert.deepEqual(decideAI(ai, world), {
+    direction: -1,
+    bite: false,
+    dash: false,
+  });
   assert.equal(ai.state, 'approach');
 });
 
@@ -184,7 +196,11 @@ test('deterministic geometry threshold ignores private inputs and never changes 
     assert.deepEqual(action, decideAI(second, world));
     assert.deepEqual(first, second);
     assert.deepEqual(structuredClone(world), before);
-    assert.deepEqual(action, { direction: offset > 0 ? -1 : 0, bite: offset < 0, dash: false });
+    assert.deepEqual(action, {
+      direction: offset > 0 ? -1 : 0,
+      bite: offset < 0,
+      dash: false,
+    });
   }
 });
 

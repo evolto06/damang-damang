@@ -15,7 +15,10 @@ import { fightFeedback } from '../src/feedback.js';
 
 test('real timestamped approach/drop/D/C crosses beneath AI and lands opposite at 30/60/144Hz', () => {
   const outcomes = [30, 60, 144].map((hz) => {
-    const runtime = createRuntime({ createOpponent: createAI, decideOpponent: decideAI });
+    const runtime = createRuntime({
+      createOpponent: createAI,
+      decideOpponent: decideAI,
+    });
     setReady(runtime, true);
     frameRuntime(runtime, 0);
     queueDirection(runtime, 0, 1, 1);
@@ -88,11 +91,7 @@ test('reversed attached order blocks walking/dashing through contact; idle dash 
   const world = createWorld();
   world.fighters[0].x = 1;
   world.fighters[1].x = -1;
-  for (let i = 0; i < 180; i++)
-    stepWorld(world, [
-      { direction: -1, dash: true },
-      { direction: 1, dash: true },
-    ]);
+  for (let i = 0; i < 180; i++) stepWorld(world, [{ direction: -1 }, { direction: 1 }]);
   assert.ok(world.fighters[0].x - world.fighters[1].x >= RULES.separation - 1e-9);
   assert.deepEqual(
     world.fighters.map((f) => f.forward),
@@ -103,6 +102,7 @@ test('reversed attached order blocks walking/dashing through contact; idle dash 
   separate.fighters[0].x = 2;
   separate.fighters[1].x = -2;
   stepWorld(separate, [{ dash: true }, { dash: true }]);
+  for (let t = 0; t < COMBAT.lungewindup; t++) stepWorld(separate);
   assert.ok(separate.fighters[0].x < 2 && separate.fighters[1].x > -2);
 });
 

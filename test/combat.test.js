@@ -150,8 +150,8 @@ test('player win, opponent win, and simultaneous lethal draw freeze the round on
     assert.ok(world.fighters.every((f) => f.hp >= 0));
   }
 });
-test('dash has no damage or invulnerability: an active bite can hit a dashing fighter', () => {
-  const world = closeWorld(0.08);
+test('a bite can interrupt a lunge during its exposed windup', () => {
+  const world = closeWorld(0.005);
   stepWorld(world, [{ bite: true }, {}]);
   tick(world, 19);
   stepWorld(world, [{}, { dash: true, direction: -1 }]);

@@ -123,6 +123,10 @@ test('pvp samples both control queues and never asks the AI', () => {
   queueAction(runtime, 1, 'bite', 1);
   frameRuntime(runtime, 17);
   assert.equal(decisions, 0);
+  assert.equal(p1.x, start[0]);
+  assert.equal(p1.phase, 'lungewindup');
+  frameRuntime(runtime, 117);
+  frameRuntime(runtime, 150);
   assert.ok(p1.x < start[0]);
   assert.ok(p1.dashRemaining > 0);
   assert.equal(p2.attackId, 1);

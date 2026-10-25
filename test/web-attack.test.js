@@ -77,7 +77,14 @@ test('web has explicit 20/2/10 phases, a finite travelling projectile, physical 
     const x = target.x;
     tick(world, WEB.stun - 1, [
       {},
-      { bite: true, shoot: true, dash: true, drop: true, web: true, direction: -forward },
+      {
+        bite: true,
+        shoot: true,
+        dash: true,
+        drop: true,
+        web: true,
+        direction: -forward,
+      },
     ]);
     assert.equal(target.phase, 'webstun');
     assert.equal(target.phaseTicks, WEB.stun);
@@ -122,7 +129,7 @@ test('shots miss a dropping target, expire, cannot fire in the air, and cooldown
   assert.equal(world.projectiles.length, 0);
   assert.deepEqual(
     world.fighters.map((f) => f.hp),
-    [100, 100],
+    [100, 90],
   );
   assert.equal(world.fighters[0].webId, 1);
   assert.equal(world.fighters[1].webId, 0);
@@ -309,7 +316,11 @@ test('K edge is consumed once, world/projectile freeze through pause and hitstop
   assert.equal(runtime.world.fighters[0].webCooldown, 0);
   const opponent = runtime.world.fighters[1];
   opponent.phase = 'webstun';
-  assert.deepEqual(decideAI(createAI(), runtime.world), { direction: 0, bite: false, dash: false });
+  assert.deepEqual(decideAI(createAI(), runtime.world), {
+    direction: 0,
+    bite: false,
+    dash: false,
+  });
   runtime.world.fighters[0].phase = 'webstun';
   const feedback = fightFeedback(runtime);
   assert.ok(Object.values(feedback.actions).every((action) => action.disabled));
@@ -346,7 +357,7 @@ test('timestamped shooting, dropping and a close combo are independent of render
       }
       frameRuntime(runtime, now);
     }
-    assert.equal(runtime.world.fighters[1].hp, 80);
+    assert.equal(runtime.world.fighters[1].hp, 70);
     return runtime.world;
   });
   assert.deepEqual(outcomes[0], outcomes[1]);

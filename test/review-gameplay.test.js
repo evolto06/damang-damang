@@ -51,7 +51,7 @@ test("a lunge telegraphs startup, strikes once, knocks off, and commits to recov
   assert.equal(player.phase, "lungewindup");
   assert.equal(player.x, 0);
   let hits = 0;
-  for (let t = 0; t < 100; t++) {
+  for (let t = 0; t < 120; t++) {
     stepWorld(world);
     hits += world.events.filter((event) => event.type === "hit").length;
   }

@@ -5,7 +5,7 @@ as the priority. Work started from `cc33a60`, which already contained many revie
 fixes. This document records code coverage; it does not close GitHub issues or
 claim subjective playtest approval.
 
-Verified locally on 2026-10-25: 122 unit tests, 22 Chromium browser scenarios,
+Verified locally on 2026-10-25: 126 unit tests, 22 Chromium browser scenarios,
 Prettier check, production build and nested deployment HTTP check all pass.
 The browser matrix includes 1366×768, 1024×600, 844×390 and 390×844, virtual
 controller routing/menu navigation, model failure and pre-module boot failure.
@@ -14,9 +14,9 @@ the complete branch-protection configuration remain unverified.
 
 | Issue | Implementation | Evidence / remaining acceptance |
 | --- | --- | --- |
-| #1 Swing physics | Momentum-preserving cast, pendulum pumping/braking, eased winch, directional blocked-climb hint; simultaneous aerial updates use the same snapshot. | Aerial, crossing and fixed-render-rate tests; confirm feel in QA. |
+| #1 Swing physics | Momentum-preserving cast, pendulum pumping/braking, eased winch, directional blocked-climb hint; simultaneous aerial updates use the same snapshot. The attached opponent can reposition or lunge during a return, within twig bounds. | Aerial, crossing, recovery movement and fixed-render-rate tests; confirm feel in QA. |
 | #2 Holder and background | Jointed fingers, knuckles, nails, cuff, shadowed limbs, window trim, striped shop awning and wider street coverage. Each outer twig has a holder. | Scene and holder-clearance tests; subjective art approval remains. |
-| #3 Lunge combat | Eight-tick startup, nine-tick moving strike, 30 damage and 24-tick recovery. Active lunges evade webs; bites remain a counter. | Combat, lunge, controller and render-rate tests; balance playtest remains. |
+| #3 Lunge combat | 26-tick startup, nine-tick moving strike, 30 damage and 36-tick recovery. Active lunges evade webs; the faster close-range bite wins simultaneous starts and punishes missed lunges. | Combat, lunge, controller and render-rate tests; balance playtest remains. |
 | #4 HUD | Distinct fighter tints/markers, nearby per-player hints, readable fallback, damage numbers, health flash, bounded camera shake, touch cues, delayed result, return to menu. | Hint tests and browser viewport checks; device readability check remains. |
 | #5 Upright flight | Smooth spinneret-pivoted upright roll on drop/knock-off, stable flight, eased inversion before the grip. | Mesh-level orientation, silk continuity and floor-clearance tests. |
 | #6 Ground damage | 10 on impact, then 5 per 60 grounded ticks. Damage uses fixed ticks and the normal result flow. | Impact/cadence/recovery/lethal-draw tests. |

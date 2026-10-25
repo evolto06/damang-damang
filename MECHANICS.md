@@ -10,7 +10,7 @@ A round lasts up to **60 seconds**. Health reaching zero ends it early; when tim
 
 Each fighter starts with **100 health**. A bite deals **20 damage** and has 18 windup ticks, 6 active ticks, and 21 recovery ticks. Fang-tip contact with the opponent's head patch determines a hit; this is a contact move rather than a broad distance attack. See `src/bite-profile.js` for the shared animation/contact geometry and `src/combat.js` for phases and hit resolution.
 
-A bite freezes the contact pose for 6 ticks. A surviving target then releases the twig and is knocked away from the attacker. Lethal contact ends the round. A lunge has 8 startup ticks, 9 active moving ticks and 24 recovery ticks. It deals 30 damage once on fang contact. Its active phase evades web projectiles; startup and recovery are exposed, and bites can interrupt it. Lunging commits to its initial direction; attached fighters cannot walk through each other.
+A bite freezes the contact pose for 6 ticks. A surviving target then releases the twig and is knocked away from the attacker. Lethal contact ends the round. A lunge has 26 startup ticks, 9 active moving ticks and 36 recovery ticks. It deals 30 damage once on fang contact. Its active phase evades web projectiles; startup and recovery are exposed. A simultaneous close-range bite interrupts the slower lunge, and bite can punish a missed lunge before its recovery ends. Lunging commits to its initial direction; attached fighters cannot walk through each other.
 
 Web shots have 20 windup ticks, 2 release ticks, and 10 recovery ticks. A hit causes 40 ticks of web stun without direct damage. The 150-tick cooldown prevents continuous shooting, and holding the button does not repeat shots. The projectile travels at 8 game units per second and has a 3-unit range; retreat beyond that range or drop below its path to evade. See `src/web-attack.js` for the current range and sweep rules and `src/web-effects.js` for visual effects.
 
@@ -21,6 +21,11 @@ Drop is available while attached and idle. Silk can be cast while falling or gro
 The winch engages on the upswing or after a short motionless hang, easing over 10 ticks toward **2.6 game units per second**. The return corridor is **4.2 × MAP_SCALE** game units; it is not an unlimited lateral movement area. If the opponent blocks the ascent, steer toward the open side shown by the hint. Reattachment lasts 18 ticks and preserves the swing's landing position. Aerial fighters cannot attack. See `src/aerial.js`, `src/silk.js`, and `src/hanging-pose.js`.
 
 Ground impact deals 10 damage once. Remaining at pavement height costs 5 more health every 60 simulation ticks. Damage can end a round, including a simultaneous draw. Casting silk remains available while grounded. Detached spiders rotate upright about the spinneret, then ease back to the inverted grip near their target twig.
+
+The attached opponent can keep walking, lunging or dropping during a return. Its
+movement stays on its own twig; bite and web shots wait until both fighters are
+attached. The bot's decision policy still grants recovery grace, without freezing
+the human player's controls.
 
 ## Arenas, camera, and opponent
 

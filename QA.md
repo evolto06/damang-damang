@@ -10,11 +10,14 @@ human playtesting. Report the arena, match mode, device, and steps for any probl
    windup, a moving 30-damage strike, and exposed recovery. Try a missed lunge,
    punishing recovery with a bite, retreating from a short-range web, and lunging
    through a web. Confirm the timing is understandable and neither attack feels
-   dominant. Bites can still interrupt a lunge.
+   dominant. At close range, a bite should beat a simultaneously started lunge;
+   a missed lunge should leave enough time for a bite to punish it.
 2. **Recovery.** Drop, let the spider turn upright, then cast silk. Steer during
    the swing and return. Ground impact costs 10 health; remaining on the pavement
    costs 5 more each second. Confirm the upright pose, legs, silk attachment and
    return to the inverted grip look convincing.
+   In PvP, move the other spider while one swings; walking, lunge and drop should
+   remain available, with walking still stopped at twig ends and gaps.
 3. **Arenas.** Try One stick, Twin sticks and Terraces. At a gap, drop toward the
    other side, fall for about half a second, then cast. The bot can follow. Try
    crossing from both heights, returning under an opponent, and following the

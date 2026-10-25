@@ -56,9 +56,14 @@ test("outward movement clamps both ends and an idle dash faces inward", () => {
 test("dash cooldown rejects rapid retries and becomes available again", () => {
   const world = createWorld();
   stepWorld(world, [{ dash: true, direction: -1 }, {}]);
+  tick(world, COMBAT.lungewindup);
   tick(world, 20, [{ dash: true, direction: -1 }, {}]);
+  assert.equal(world.fighters[0].attackId, 1);
   assert.ok(world.fighters[0].cooldown < RULES.dashCooldown - 0.2);
-  tick(world, 50, [{}, {}]);
+  tick(world, Math.ceil(RULES.dashCooldown * 60) + COMBAT.lungewindup, [
+    {},
+    {},
+  ]);
   assert.equal(world.fighters[0].cooldown, 0);
   stepWorld(world, [{ dash: true }, {}]);
   assert.equal(world.fighters[0].phase, "lungewindup");

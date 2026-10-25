@@ -209,18 +209,19 @@ test("airborne spiders cannot bite/dash/be hit; AI immediately holds and leaves 
   world.fighters[1].x = RULES.separation;
   world.fighters[1].velocity = -2;
   world.tick = 120;
-  stepWorld(world, [{ drop: true }, { bite: true, direction: -1 }]);
+  stepWorld(world, [{ drop: true }, { bite: true }]);
   const opponentX = world.fighters[1].x;
   for (let i = 0; i < 90; i++) {
     const action = decideAI(ai, world);
     assert.equal(action.direction, 0);
     assert.equal(action.bite, false);
-    stepWorld(world, [
-      { bite: true, dash: true },
-      { bite: true, direction: -1 },
-    ]);
+    stepWorld(world, [{ bite: true, dash: true }, action]);
   }
-  assert.equal(world.fighters[1].x, opponentX);
+  assert.ok(
+    Math.abs(world.fighters[1].x - opponentX) < 0.1,
+    "the waiting bot brakes its existing momentum",
+  );
+  assert.equal(world.fighters[1].velocity, 0);
   assert.deepEqual(
     world.fighters.map((f) => [f.hp, f.attackId]),
     [

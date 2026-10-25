@@ -86,7 +86,14 @@ test("drop turns upright, pavement hurts, and one web press returns to a real tw
     .toBe("grounded");
   const grounded = (await state(page)).fighters[0];
   expect(grounded.hp).toBeLessThanOrEqual(90);
+  const p2Start = (await state(page)).fighters[1].x;
   await page.locator("#web").click();
+  await page.keyboard.down("ArrowRight");
+  await expect
+    .poll(async () => (await state(page)).fighters[1].x)
+    .toBeGreaterThan(p2Start + 0.05);
+  expect((await state(page)).fighters[0].air.mode).not.toBe("attached");
+  await page.keyboard.up("ArrowRight");
   await expect
     .poll(async () => (await state(page)).fighters[0].air.mode, {
       timeout: 20_000,

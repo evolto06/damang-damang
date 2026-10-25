@@ -110,12 +110,8 @@ export function hintsFor(world, index = 0, mode = "bot", input = "keyboard") {
       return [hint("move", "Steer")];
     return [];
   }
-  if (
-    !isAttached(opponent) ||
-    fighter.phase !== "idle" ||
-    fighter.dashRemaining > 1e-9
-  )
-    return [];
+  if (fighter.phase !== "idle" || fighter.dashRemaining > 1e-9) return [];
+  if (!isAttached(opponent)) return [hint("move", "Reposition")];
   if (!sameStick(fighter.x, opponent.x, world.stage)) {
     const toward = fighter.x < opponent.x ? 1 : -1;
     const edge = stickAt(fighter.x, world.stage)[toward > 0 ? 1 : 0];
@@ -164,9 +160,8 @@ export function fightFeedback(runtime) {
       : dashing
         ? "Lunging"
         : "";
-  const stickReason =
-    frozen ||
-    (!attached ? airLabels[player.air.mode] : waiting ? "Return hold" : busy);
+  const stickReason = frozen || (!attached ? airLabels[player.air.mode] : busy);
+  const attackReason = stickReason || (waiting ? "Opponent airborne" : "");
   const dropReason = frozen || (!attached ? airLabels[player.air.mode] : busy);
   const cooling = player.cooldown > 1e-8;
   const dashReason =
@@ -179,7 +174,7 @@ export function fightFeedback(runtime) {
     frozen ||
     (!canWeb ? (attached ? "Drop first" : airLabels[player.air.mode]) : "");
   const shootReason =
-    stickReason ||
+    attackReason ||
     (player.webCooldown > 0
       ? `Wait ${(Math.ceil(player.webCooldown / 6) / 10).toFixed(1)}s`
       : "");
@@ -197,8 +192,6 @@ export function fightFeedback(runtime) {
         ? `Twig too high · Steer ${clearLabel(player, keys)} back beneath your silk anchor.`
         : `${opponentName} above · Steer ${clearLabel(player, keys)} to clear them and keep climbing.`
       : returnPrompt(player, keys);
-  else if (waiting)
-    prompt = `${opponentName} returning · Movement, bite and lunge wait for their grip.`;
   else if (player.phase === "webstun")
     prompt = "Web stunned · Briefly trapped; wait to recover.";
   else if (player.phase === "webwindup")
@@ -224,6 +217,8 @@ export function fightFeedback(runtime) {
   else if (dashing)
     prompt =
       "Lunging · Wait for the lunge to finish before biting or dropping.";
+  else if (waiting)
+    prompt = `${opponentName} returning · Move to reposition, lunge or drop; bites wait for their grip.`;
   else if (!sameStick(player.x, opponent.x, world.stage))
     prompt = `Across the gap · Move to the inner end; ${keys.drop} drops; steer ${player.x < opponent.x ? keys.right : keys.left} across, then ${keys.web} returns.`;
   else if (cooling)
@@ -232,19 +227,15 @@ export function fightFeedback(runtime) {
     prompt,
     cooling,
     phases: world.fighters.map(
-      (fighter, index) =>
-        lifecycle ||
-        airLabels[fighter.air.mode] ||
-        (!isAttached(world.fighters[1 - index])
-          ? "Return hold"
-          : phaseLabels[fighter.phase]),
+      (fighter) =>
+        lifecycle || airLabels[fighter.air.mode] || phaseLabels[fighter.phase],
     ),
     actions: {
       shoot: {
         disabled: !!shootReason,
         caption: shootReason || `${keys.shoot} · STUN`,
       },
-      bite: { disabled: !!stickReason, caption: stickReason || keys.bite },
+      bite: { disabled: !!attackReason, caption: attackReason || keys.bite },
       dash: { disabled: !!dashReason, caption: dashReason || keys.dash },
       drop: { disabled: !!dropReason, caption: dropReason || keys.drop },
       web: { disabled: !!webReason, caption: webReason || keys.web },
@@ -252,7 +243,7 @@ export function fightFeedback(runtime) {
     movementDisabled:
       !!frozen ||
       (attached
-        ? waiting || player.phase !== "idle"
+        ? player.phase !== "idle"
         : ["grounded", "reattaching"].includes(player.air.mode)),
   };
 }

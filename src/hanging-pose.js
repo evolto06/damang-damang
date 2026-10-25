@@ -13,7 +13,7 @@ export function hangingPose(fighter, forward = fighter?.forward ?? 1) {
   const suspended = ['deploying', 'swinging', 'reeling', 'reattaching'].includes(air.mode);
   // Rotation adds height to the silhouette. Keep the calibrated folded envelope
   // near the floor and below an opponent, and settle before the final twig grip.
-  const clearance = smooth((-air.y - 0.65) / 0.35) * smooth((air.y - AIR.groundY - 0.35) / 0.5);
+  const clearance = smooth(((air.targetY ?? 0) - air.y - 0.65) / 0.35) * smooth((air.y - AIR.groundY - 0.35) / 0.5);
   const phase = age * 0.14;
   const drift = clamp(air.vx * forward / AIR.maxSwingSpeed, -1, 1);
   const offset = outletOffset({ forward });

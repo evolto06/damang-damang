@@ -76,7 +76,7 @@ export function createStreet(scene) {
   box(street, '#9a8e76', [4.5, -1.2, -6.5], [4.8, 0.16, 0.75]);
   for (let i = 0; i < 6; i++) box(street, i % 2 ? '#c9bd8c' : '#b78e74', [2.8 + i * 0.65, -0.77, -6.67], [0.24, 0.68, 0.24]);
   box(street, '#778781', [10.2, -0.5, -6.86], [2.3, 3.4, 0.13]);
-  sign(street, 'Tindahan ni Nena', 'BIGAS  •  MERYENDA  •  PALAMIG', [4.5, 2.0, -6.7], 5, 1.22, '#e0d7ad', '#536960');
+  sign(street, 'Tindahan ni Nena', 'BIGAS  â€¢  MERYENDA  â€¢  PALAMIG', [4.5, 2.0, -6.7], 5, 1.22, '#e0d7ad', '#536960');
   sign(street, 'BARANGAY', 'PAALALA: PANATILIHING MALINIS', [-1.1, 1.15, -6.32], 2.1, 0.78, '#c6d1c3', '#596e66');
   for (const [x, z] of [[-10.2, -5.8], [8.3, -6.1]]) {
     link(street, '#a08166', [x, -2.2, z], [x, -1.5, z], 0.35, 0.43);
@@ -95,15 +95,15 @@ export function createHeldStick(scene, stage = 'single') {
   function drawTwigs(layout) {
     for (const node of geometryNodes) { root.remove(node); node.geometry?.dispose(); }
     geometryNodes.length = 0;
-    for (const { body: [left, right] } of layout.sticks) {
+    for (const { body: [left, right], y } of layout.sticks) {
       const twig = new THREE.Mesh(new THREE.CylinderGeometry(AIR.leftRadius, STICK.radius, right - left, 10), material('#776044'));
-      twig.name = 'Twig'; twig.position.x = (left + right) / 2;
+      twig.name = 'Twig'; twig.position.set((left + right) / 2, y, 0);
       twig.rotation.z = Math.PI / 2; twig.castShadow = true;
       root.add(twig); geometryNodes.push(twig);
       for (let x = left + 1.35; x < right - 0.7; x += 4.35) {
         const radius = AIR.leftRadius + (STICK.radius - AIR.leftRadius) * (x - left) / (right - left);
         const node = new THREE.Mesh(new THREE.TorusGeometry(radius, 0.009, 4, 10), material('#8c7350'));
-        node.rotation.y = Math.PI / 2; node.position.x = x; root.add(node); geometryNodes.push(node);
+        node.rotation.y = Math.PI / 2; node.position.set(x, y, 0); root.add(node); geometryNodes.push(node);
       }
     }
   }
@@ -132,6 +132,8 @@ export function createHeldStick(scene, stage = 'single') {
   root.setStage = value => {
     const layout = getStage(value); drawTwigs(layout);
     holder.position.x = STICK.holderOffset + (layout.sticks.at(-1).body[1] - STICK.rightEnd);
+    holder.position.y = layout.sticks.at(-1).y;
+    leftHolder.position.y = layout.sticks[0].y;
     leftHolder.visible = layout.sticks.length > 1;
     leftHolder.position.x = layout.sticks[0].body[0] + 0.6 + 6.5;
     root.userData.stage = layout.id;

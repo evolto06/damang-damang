@@ -1,6 +1,6 @@
 import { COMBAT, clearGap } from './combat.js';
-import { isAttached } from './aerial.js';
-import { sameStick, stickAt } from './stage.js';
+import { isAttached, AIR } from './aerial.js';
+import { sameStick, stickAt, stickFor, getStage } from './stage.js';
 
 export const AI_RULES = Object.freeze({ initialWait: 60, decisionDelay: 30, minDelay: 18, maxDelay: 48, retreatTicks: 25, castDelay: 30, rangeMargin: Math.min(0.005, COMBAT.reach / 4) });
 export function createAI(seed = 0x6d2b79f5) {
@@ -25,8 +25,18 @@ export function decideAI(ai, world) {
   if (!isAttached(me)) {
     ai.state = 'aerial_hold';
     const away = Math.sign(me.x - player.x) || -me.forward;
-    const steer = me.air.blocked ? (me.air.clearDirection || away) : sameStick(me.x, player.x, world.stage) ? 0 : -away;
-    return { ...action, direction: steer, web: me.air.mode === 'grounded' || (me.air.mode === 'falling' && me.air.ticks >= (ai.castDelay ?? AI_RULES.castDelay)) };
+    const target = getStage(world.stage).sticks[ai.route] ?? stickFor(player, world.stage);
+    const elevated = getStage(world.stage).sticks.some(stick => stick.y !== target.y);
+    // A cast to a higher rail needs enough lateral travel to make that twig
+    // nearest; once caught, retain steering until the body reaches its walkway.
+    const destination = Math.max(target.walk[0] + 1, Math.min(target.walk[1] - 1, player.x));
+    const onRoute = me.x >= target.walk[0] && me.x <= target.walk[1];
+    const steer = me.air.blocked ? (me.air.clearDirection || away)
+      : elevated ? (onRoute ? 0 : Math.sign(destination - me.x))
+      : sameStick(me.x, player, world.stage) ? 0 : -away;
+    const castable = me.air.mode === 'grounded' || (me.air.mode === 'falling' && me.air.ticks >= (ai.castDelay ?? AI_RULES.castDelay));
+    const overTarget = me.x >= target.body[0] + 0.8 && me.x <= target.body[1] - 0.8;
+    return { ...action, direction: steer, web: castable && (!elevated || me.air.mode === 'grounded' || (overTarget && me.air.y < target.y - 0.1)) };
   }
   if (!isAttached(player)) { ai.state = 'aerial_hold'; return action; }
   if (ai.state === 'aerial_hold') {
@@ -34,8 +44,15 @@ export function decideAI(ai, world) {
   }
   // Grace applies to approaching a gap as well as approaching an opponent.
   if (world.tick < ai.readyAt && ['opening_wait', 'return_grace'].includes(ai.state)) return action;
-  if (!sameStick(player.x, me.x, world.stage)) {
-    const [low, high] = stickAt(me.x, world.stage), edge = player.x > me.x ? high : low;
+  if (!sameStick(player, me, world.stage)) {
+    const own = stickFor(me, world.stage), goal = stickFor(player, world.stage);
+    // Pick the player's rail when reachable, otherwise the closest intervening
+    // rail. All routes stay inside the same finite steering corridor as players.
+    const routes = getStage(world.stage).sticks.filter(stick => stick !== own && Math.max(0, Math.max(own.walk[0], stick.walk[0]) - Math.min(own.walk[1], stick.walk[1])) <= AIR.corridor);
+    const target = routes.includes(goal) ? goal : routes.sort((a, b) => Math.abs((a.walk[0] + a.walk[1]) / 2 - player.x) - Math.abs((b.walk[0] + b.walk[1]) / 2 - player.x))[0];
+    if (!target) return action;
+    ai.route = getStage(world.stage).sticks.indexOf(target);
+    const [low, high] = own.walk, edge = target.walk[0] > me.x ? high : low;
     if (Math.abs(me.x - edge) < 0.05 && me.phase === 'idle' && me.dashRemaining <= 0) {
       ai.castDelay = ai.crossing ? Math.min(60, (ai.castDelay ?? AI_RULES.castDelay) + 15) : AI_RULES.castDelay;
       ai.crossing = true; ai.state = 'aerial_hold';

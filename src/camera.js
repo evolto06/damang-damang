@@ -1,18 +1,18 @@
 import * as THREE from 'three';
 import { AIR } from './aerial.js';
 import { MAP_SCALE } from './movement.js';
-import { span } from './stage.js';
+import { span, getStage } from './stage.js';
 
 // Keep the complete drop/retrieve volume between the HUD bands, including on
 // short/wide screens where fitting only the twig would hide the pavement.
 export function fitPlayCamera(camera, width, height, focus = { x: 1.7 * MAP_SCALE, halfSpan: 8.6 * MAP_SCALE }) {
   const short = width > 600 && height <= 520;
   const topBand = short ? 104 : 148;
-  const bottomBand = short ? 94 : width <= 600 ? 174 : 132;
+  const bottomBand = Math.max(short ? 94 : width <= 600 ? 174 : 132, focus.bottomBand ?? 0);
   camera.updateMatrixWorld(true);
-  const top = new THREE.Vector3(0, AIR.stickY + 0.2, 0).applyMatrix4(camera.matrixWorldInverse).y;
+  const top = new THREE.Vector3(0, AIR.stickY + (focus.topY ?? 0) + 0.2, 0).applyMatrix4(camera.matrixWorldInverse).y;
   const bottom = new THREE.Vector3(0, -2.55, 0).applyMatrix4(camera.matrixWorldInverse).y;
-  const aspect = width / height, usable = Math.max(height * 0.25, height - topBand - bottomBand);
+  const aspect = width / height, usable = Math.max(1, height - topBand - bottomBand);
   const halfHeight = Math.max(focus.halfSpan / aspect, (top - bottom) * height / (2 * usable));
   const halfWidth = halfHeight * aspect;
   // Pin the pavement to the bottom HUD band; the wider arena's extra vertical
@@ -29,6 +29,9 @@ export function fitPlayCamera(camera, width, height, focus = { x: 1.7 * MAP_SCAL
 // response at 30, 60 or 144 render Hz; physics remains on its fixed clock.
 export function followCameraFocus(focus, fighters, stage, deltaSeconds = 1 / 60) {
   const xs = fighters.map(fighter => fighter.x), [low, high] = span(stage);
+  const ys = fighters.map(fighter => fighter.air?.y ?? fighter.fighter?.air?.y ?? fighter.y ?? 0);
+  const highest = Math.max(...ys);
+  focus.topY = Math.max(highest, ...getStage(stage).sticks.map(stick => stick.y));
   const midpoint = (Math.min(...xs) + Math.max(...xs)) / 2;
   const targetSpan = Math.min((high - low) / 2 + 1.8, Math.max(4.2, (Math.max(...xs) - Math.min(...xs)) / 2 + 1.8));
   const targetX = Math.max(low, Math.min(high, midpoint));

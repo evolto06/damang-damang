@@ -1,15 +1,15 @@
 import { createMover, moveFighter, resolveContact, RULES } from './movement.js';
 import { bitePose, biteContact, mixPose, BITE_CENTER_REACH } from './bite-profile.js';
 import { WEB, webPose, launchWeb, advanceWebs } from './web-attack.js';
-import { createAir, isAttached, releaseStick, advanceAerial } from './aerial.js';
-import { getStage, sameStick } from './stage.js';
+import { createAir, isAttached, releaseStick, advanceAerial, AIR } from './aerial.js';
+import { getStage, sameStick, stickFor } from './stage.js';
 import { createIdle, advanceIdle } from './idle-pose.js';
 
-export const COMBAT = Object.freeze({ tickRate: 60, windup: 18, active: 6, recovery: 21, hitstun: 11, hitstop: 6, maxHealth: 100, damage: 20, reach: BITE_CENTER_REACH - RULES.separation, knockback: 0.25, knockOffSpeed: 2.5, roundTicks: 60 * 60 });
+export const COMBAT = Object.freeze({ tickRate: 60, windup: 18, active: 6, recovery: 21, hitstun: 11, hitstop: 6, maxHealth: 100, damage: 20, reach: BITE_CENTER_REACH - RULES.separation, knockback: 0.25, knockOffSpeed: 2.5, roundTicks: 60 * 60, groundGraceTicks: 120, groundIntervalTicks: 60, groundDamage: 5 });
 export const clearGap = world => Math.max(0, Math.abs(world.fighters[1].x - world.fighters[0].x) - RULES.separation);
 
 function createFighter(id, x, forward, stage) {
-  return { ...createMover(x, forward), id, stage, idleBounce: createIdle(), hp: COMBAT.maxHealth, air: createAir(), phase: 'idle', phaseTicks: 0, pose: bitePose('idle'), webCooldown: 0, webId: 0, attackId: 0, attackHit: false, hitTick: -1000 };
+  return { ...createMover(x, forward), id, stage, idleBounce: createIdle(), hp: COMBAT.maxHealth, air: createAir(stickFor(x, stage).y), groundTicks: 0, phase: 'idle', phaseTicks: 0, pose: bitePose('idle'), webCooldown: 0, webId: 0, attackId: 0, attackHit: false, hitTick: -1000 };
 }
 export function createWorld(stageId = 'single') {
   const stage = getStage(stageId);
@@ -110,7 +110,7 @@ export function stepWorld(world, actions = [{}, {}]) {
   const hits = [];
   for (let index = 0; index < 2; index++) {
     const fighter = world.fighters[index];
-    if (fighter.phase !== 'active' || fighter.attackHit || !world.fighters.every(isAttached) || !previous.every(f => f.attached) || !sameStick(world.fighters[0].x, world.fighters[1].x, world.stage)) continue;
+    if (fighter.phase !== 'active' || fighter.attackHit || !world.fighters.every(isAttached) || !previous.every(f => f.attached) || !sameStick(world.fighters[0], world.fighters[1], world.stage)) continue;
     const contact = biteContact(fighter, world.fighters[1 - index], previous[index], previous[1 - index]);
     if (contact) hits.push({ type: 'hit', source: index, target: 1 - index, damage: COMBAT.damage, attackId: fighter.attackId, contact });
   }
@@ -130,7 +130,22 @@ export function stepWorld(world, actions = [{}, {}]) {
     target.velocity = 0; target.dashRemaining = 0; target.hitTick = world.tick;
     enter(target, target.hp ? 'hitstun' : 'ko');
   }
-  world.events = [...webHits, ...hits];
+  // Exposure counts fixed simulation ticks on the pavement, including cast
+  // preparation. Retrieval stops damage as soon as the spider lifts clear.
+  // A complete grip restores the grace period for the next knock-off.
+  const groundHits = [];
+  world.fighters.forEach((fighter, index) => {
+    if (isAttached(fighter)) { fighter.groundTicks = 0; return; }
+    if (fighter.air.y > AIR.groundY + 1e-8) return;
+    fighter.groundTicks++;
+    const exposed = fighter.groundTicks - COMBAT.groundGraceTicks;
+    if (exposed <= 0 || exposed % COMBAT.groundIntervalTicks) return;
+    const damage = Math.min(fighter.hp, COMBAT.groundDamage);
+    fighter.hp -= damage; fighter.hitTick = world.tick;
+    groundHits.push({ type: 'groundhit', target: index, damage });
+    if (!fighter.hp) enter(fighter, 'ko');
+  });
+  world.events = [...webHits, ...hits, ...groundHits];
   if (world.fighters.some(fighter => !fighter.hp)) endRound(world, 'ko');
   else if (!world.remainingTicks) endRound(world, 'timeout');
   for (const fighter of world.fighters) if (!['idle', 'ko'].includes(fighter.phase)) fighter.phaseTicks++;

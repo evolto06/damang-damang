@@ -96,3 +96,18 @@ test('trades and lethal contact remain visible, with recoil deferred until six s
     else { assert.equal(world.hitstop, 0); assert.ok((world.fighters[0].x - positions[0]) * (reversed ? 1 : -1) > 0 && (world.fighters[1].x - positions[1]) * (reversed ? -1 : 1) > 0); }
   }
 });
+
+test('a bite started from a fully bouncing idle restores both calibrated bodies before real contact', () => {
+  for (const reversed of [false, true]) {
+    const world = closeWorld(0.01, reversed);
+    for (let tick = 0; tick < 240; tick++) stepWorld(world);
+    assert.ok(world.fighters.every(f => f.idleBounce.blend === 1));
+    render(world);
+    assert.ok(rigs.every(rig => rig.torso.position.y > 0));
+    stepWorld(world, [{ bite: true }, {}]); render(world);
+    assert.ok(rigs.every(rig => rig.torso.position.y === 0));
+    while (!world.impact && world.tick < 265) stepWorld(world);
+    assert.equal(world.fighters[1].hp, 80);
+    assertVisibleContact(world);
+  }
+});

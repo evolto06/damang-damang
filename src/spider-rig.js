@@ -6,7 +6,6 @@ import { WEB, webPose } from './web-attack.js';
 import { AIR } from './aerial.js';
 import { RULES } from './movement.js';
 import { hangingPose } from './hanging-pose.js';
-
 import { idlePose } from './idle-pose.js';
 
 export const PLAYER_TINTS = Object.freeze(['#efc26f', '#a7d9d5']);
@@ -366,7 +365,8 @@ function updateSpiderRig(rig, x, fighter) {
       new THREE.Vector3(s * 0.43, toe.y - 0.08, z),
       toe,
     ];
-    points[1].y -= idle.lift / 7;
+    // Flex the proximal joints with the body, keeping every distal grip fixed.
+    points[1].y -= idle.lift / 7; // this joint already inherits the lifted hip
     for (let joint = 2; joint < 7; joint++) points[joint].y += idle.lift * (1 - joint / 7);
     if (webStand > 0) {
       points[2].y += 0.8 * webStand;

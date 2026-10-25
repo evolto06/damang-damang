@@ -52,7 +52,7 @@ test('return and blocked climb hints use the open direction and active bindings'
   assert.equal(hintsFor(world, 1, 'pvp', 'touch')[0].text, 'Return');
 });
 
-test('hints respect real bite distance, recovery, return hold and frozen simulation', () => {
+test('hints respect bite distance, recovery, free repositioning and frozen simulation', () => {
   const world = closeWorld(),
     fighter = world.fighters[0],
     opponent = world.fighters[1];
@@ -69,7 +69,7 @@ test('hints respect real bite distance, recovery, return hold and frozen simulat
   }
   fighter.phase = 'idle';
   opponent.air.mode = 'reeling';
-  assert.deepEqual(hintsFor(world), []);
+  assert.equal(hintsFor(world)[0].verb, 'Reposition');
   opponent.air.mode = 'attached';
   world.hitstop = 1;
   assert.deepEqual(hintsFor(world), []);

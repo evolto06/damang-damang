@@ -4,6 +4,7 @@ const BUTTONS = Object.freeze({
   web: 1,
   bite: 2,
   shoot: 3,
+  restart: 8,
   pause: 9,
   up: 12,
   drop: 13,
@@ -20,12 +21,30 @@ export function normalizeGamepad(gamepad, now) {
         (button) => !!button && (button.pressed === true || button.value > 0.5),
       )
     : [];
+  const axisX = Number.isFinite(gamepad.axes?.[0]) ? gamepad.axes[0] : 0;
+  const axisY = Number.isFinite(gamepad.axes?.[1]) ? gamepad.axes[1] : 0;
+  const dpadHeld = buttons[BUTTONS.left] || buttons[BUTTONS.right];
+  const direction = dpadHeld
+    ? Number(buttons[BUTTONS.right]) - Number(buttons[BUTTONS.left])
+    : Math.abs(axisX) >= 0.35
+      ? Math.sign(axisX)
+      : 0;
+  if (supported) {
+    buttons[BUTTONS.drop] ||= axisY >= 0.6;
+    buttons[BUTTONS.up] ||= axisY <= -0.6;
+  }
   const at =
     Number.isFinite(gamepad.timestamp) && gamepad.timestamp > 0 && gamepad.timestamp <= now
       ? gamepad.timestamp
       : now;
-  const axes = Array.from(gamepad.axes ?? [], (value) => (Number.isFinite(value) ? value : 0));
-  return { key: `${gamepad.index}:${gamepad.id}`, supported, buttons, axes, at };
+  return {
+    key: `${gamepad.index}:${gamepad.id}`,
+    supported,
+    buttons,
+    direction,
+    axes: Array.from(gamepad.axes ?? [], (value) => (Number.isFinite(value) ? value : 0)),
+    at,
+  };
 }
 
 export function createControllerInput() {
@@ -120,6 +139,7 @@ export function createControllerInput() {
         if (!slot.armed) {
           // A reveal, reconnect, mode change or resume requires full neutral first.
           slot.armed =
+            !pad.direction &&
             !usedButtons.some((index) => pad.buttons[index]) &&
             !pad.axes.slice(0, 2).some((value) => Math.abs(value) >= 0.35);
           slot.previous = pad.buttons;
@@ -141,12 +161,28 @@ export function createControllerInput() {
         slot.axisY = y;
         return { fighter, pad, pressed, axisX, axisY };
       });
-      result.slots = slots.map(({ key, connected, armed }) => ({ key, connected, armed }));
+      result.slots = slots.map(({ key, connected, armed }) => ({
+        key,
+        connected,
+        armed,
+      }));
       result.connected = slots[0].connected;
       result.armed = slots[0].armed;
       const participating = edges
         .slice(0, context.started && context.mode !== 'pvp' ? 1 : 2)
         .filter(Boolean);
+      if (context.navigateUI) {
+        result.navigation = participating.flatMap(({ pressed }) => [
+          ...(pressed.up ? ['previous'] : []),
+          ...(pressed.drop ? ['next'] : []),
+          ...(pressed.left ? ['left'] : []),
+          ...(pressed.right ? ['right'] : []),
+          ...(pressed.dash ? ['confirm'] : []),
+        ]);
+        if (context.paused && participating.some((edge) => edge.pressed.pause))
+          result.command = 'resume';
+        return result;
+      }
       if (context.navigation) {
         for (const edge of participating) {
           const { pressed, axisX, axisY } = edge;
@@ -183,18 +219,12 @@ export function createControllerInput() {
       ) {
         if (!context.paused) result.command = 'pause';
         else result.command = 'resume';
-      }
+      } else if (participating.some((edge) => edge.pressed.restart)) result.command = 'restart';
       if (result.command || !context.ready || context.paused || context.ended || !context.focused)
         return result;
       for (const { fighter, pad, pressed } of participating) {
         const slot = slots[fighter];
-        const dpad = Number(pad.buttons[BUTTONS.right]) - Number(pad.buttons[BUTTONS.left]);
-        const nextDirection =
-          pad.buttons[BUTTONS.right] || pad.buttons[BUTTONS.left]
-            ? dpad
-            : Math.abs(pad.axes[0] ?? 0) >= 0.35
-              ? Math.sign(pad.axes[0])
-              : 0;
+        const nextDirection = pad.direction;
         if (nextDirection !== slot.direction) {
           slot.direction = nextDirection;
           const direction = { fighter, value: nextDirection, at: pad.at };

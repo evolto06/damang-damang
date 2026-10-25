@@ -182,7 +182,7 @@ function groundedWorld(health = [100, 100]) {
   });
   return world;
 }
-test('pavement burn ticks once per interval for both fighters, and stops after retrieval lifts', () => {
+test('pavement damage ticks once per interval for both fighters and stops after retrieval lifts', () => {
   const world = groundedWorld();
   advance(world, COMBAT.groundInterval - 1);
   assert.deepEqual(

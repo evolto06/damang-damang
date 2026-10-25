@@ -1,4 +1,4 @@
-import { isAttached } from './aerial.js';
+import { isAttached, getSilkCastTarget } from './aerial.js';
 import { COMBAT, clearGap } from './combat.js';
 import { sameStick, stickAt } from './stage.js';
 
@@ -101,12 +101,15 @@ export function hintsFor(world, index = 0, mode = 'bot', input = 'keyboard') {
   });
   if (world.status !== 'playing' || fighter.hp <= 0 || world.hitstop > 0) return [];
   if (!isAttached(fighter)) {
+    if (['swinging', 'reeling'].includes(fighter.air.mode) && getSilkCastTarget(fighter))
+      return [hint('web', 'Cast higher'), hint('move', 'Steer')];
     if (fighter.air.blocked) return [hint('move', 'Clear', clearLabel(fighter, keys))];
     if (['falling', 'grounded'].includes(fighter.air.mode)) return [hint('web', 'Return')];
     if (['swinging', 'reeling'].includes(fighter.air.mode)) return [hint('move', 'Steer')];
     return [];
   }
-  if (!isAttached(opponent) || fighter.phase !== 'idle' || fighter.dashRemaining > 1e-9) return [];
+  if (fighter.phase !== 'idle' || fighter.dashRemaining > 1e-9) return [];
+  if (!isAttached(opponent)) return [hint('move', 'Reposition')];
   if (!sameStick(fighter.x, opponent.x, world.stage)) {
     const toward = fighter.x < opponent.x ? 1 : -1;
     const edge = stickAt(fighter.x, world.stage)[toward > 0 ? 1 : 0];
@@ -130,12 +133,13 @@ const returnPrompt = (fighter, keys) =>
   })[fighter.air.mode];
 
 // Presentation reads the same eligibility gates as combat; it never queues input.
-export function fightFeedback(runtime) {
+export function fightFeedback(runtime, index = 0) {
   const { world, ready, paused } = runtime;
-  const [player, opponent] = world.fighters;
+  const player = world.fighters[index],
+    opponent = world.fighters[1 - index];
   const pvp = runtime.mode === 'pvp';
-  const keys = keysFor(runtime.mode, 0, runtime.inputSources?.[0]);
-  const opponentName = pvp ? 'P2' : 'Opponent';
+  const keys = keysFor(runtime.mode, index, runtime.inputSources?.[index]);
+  const opponentName = pvp ? (index ? 'P1' : 'P2') : 'Opponent';
   const lifecycle =
     world.status !== 'playing' ? 'Round over' : paused ? 'Paused' : !ready ? 'Loading' : '';
   const frozen = lifecycle || (world.hitstop > 0 ? 'Contact hold' : '');
@@ -143,17 +147,18 @@ export function fightFeedback(runtime) {
     waiting = attached && !isAttached(opponent);
   const dashing = player.dashRemaining > 1e-9;
   const busy = player.phase !== 'idle' ? phaseLabels[player.phase] : dashing ? 'Lunging' : '';
-  const stickReason =
-    frozen || (!attached ? airLabels[player.air.mode] : waiting ? 'Return hold' : busy);
+  const stickReason = frozen || (!attached ? airLabels[player.air.mode] : busy);
+  const attackReason = stickReason || (waiting ? 'Opponent airborne' : '');
   const dropReason = frozen || (!attached ? airLabels[player.air.mode] : busy);
   const cooling = player.cooldown > 1e-8;
   const dashReason =
     stickReason || (cooling ? `Wait ${(Math.ceil(player.cooldown * 10) / 10).toFixed(1)}s` : '');
-  const canWeb = ['falling', 'grounded'].includes(player.air.mode);
+  const canWeb = !!getSilkCastTarget(player);
+  const canRecast = canWeb && ['swinging', 'reeling'].includes(player.air.mode);
   const webReason =
     frozen || (!canWeb ? (attached ? 'Drop first' : airLabels[player.air.mode]) : '');
   const shootReason =
-    stickReason ||
+    attackReason ||
     (player.webCooldown > 0 ? `Wait ${(Math.ceil(player.webCooldown / 6) / 10).toFixed(1)}s` : '');
   let prompt = `Close in, then ${keys.bite} bites; ${keys.shoot} shoots a stunning web.`;
   if (world.status !== 'playing') prompt = 'Round over · Choose Fight again or press R to restart.';
@@ -161,13 +166,13 @@ export function fightFeedback(runtime) {
   else if (!ready) prompt = 'Preparing the spiders · Controls unlock when loading finishes.';
   else if (world.hitstop > 0) prompt = 'Contact · Brief impact hold; actions resume automatically.';
   else if (!attached)
-    prompt = player.air.blocked
-      ? player.air.blockReason === 'height'
-        ? `Twig too high · Steer ${clearLabel(player, keys)} back beneath your silk anchor.`
-        : `${opponentName} above · Steer ${clearLabel(player, keys)} to clear them and keep climbing.`
-      : returnPrompt(player, keys);
-  else if (waiting)
-    prompt = `${opponentName} returning · Movement, bite and lunge wait for their grip.`;
+    prompt = canRecast
+      ? `Higher twig in reach · ${keys.web} casts a new silk line; ${keys.move} steers toward it.`
+      : player.air.blocked
+        ? player.air.blockReason === 'height'
+          ? `Twig too high · Steer ${clearLabel(player, keys)} back beneath your silk anchor.`
+          : `${opponentName} above · Steer ${clearLabel(player, keys)} to clear them and keep climbing.`
+        : returnPrompt(player, keys);
   else if (player.phase === 'webstun') prompt = 'Web stunned · Briefly trapped; wait to recover.';
   else if (player.phase === 'webwindup')
     prompt = 'Web windup · Stand tall and curl the abdomen forward.';
@@ -189,6 +194,8 @@ export function fightFeedback(runtime) {
   else if (player.phase === 'lungerecovery')
     prompt = 'Lunge recovery · Exposed after the strike; wait before acting.';
   else if (dashing) prompt = 'Lunging · Wait for the lunge to finish before biting or dropping.';
+  else if (waiting)
+    prompt = `${opponentName} returning · Move to reposition, lunge or drop; bites wait for their grip.`;
   else if (!sameStick(player.x, opponent.x, world.stage))
     prompt = `Across the gap · Move to the inner end; ${keys.drop} drops; steer ${player.x < opponent.x ? keys.right : keys.left} across, then ${keys.web} returns.`;
   else if (cooling) prompt = 'On stick · Bite and movement ready; lunge is cooling down.';
@@ -196,25 +203,23 @@ export function fightFeedback(runtime) {
     prompt,
     cooling,
     phases: world.fighters.map(
-      (fighter, index) =>
-        lifecycle ||
-        airLabels[fighter.air.mode] ||
-        (!isAttached(world.fighters[1 - index]) ? 'Return hold' : phaseLabels[fighter.phase]),
+      (fighter) => lifecycle || airLabels[fighter.air.mode] || phaseLabels[fighter.phase],
     ),
     actions: {
       shoot: {
         disabled: !!shootReason,
         caption: shootReason || `${keys.shoot} · STUN`,
       },
-      bite: { disabled: !!stickReason, caption: stickReason || keys.bite },
+      bite: { disabled: !!attackReason, caption: attackReason || keys.bite },
       dash: { disabled: !!dashReason, caption: dashReason || keys.dash },
       drop: { disabled: !!dropReason, caption: dropReason || keys.drop },
-      web: { disabled: !!webReason, caption: webReason || keys.web },
+      web: {
+        disabled: !!webReason,
+        caption: webReason || (canRecast ? `${keys.web} · HIGHER` : keys.web),
+      },
     },
     movementDisabled:
       !!frozen ||
-      (attached
-        ? waiting || player.phase !== 'idle'
-        : ['grounded', 'reattaching'].includes(player.air.mode)),
+      (attached ? player.phase !== 'idle' : ['grounded', 'reattaching'].includes(player.air.mode)),
   };
 }

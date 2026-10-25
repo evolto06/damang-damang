@@ -10,20 +10,20 @@ const ready = () => {
   return runtime;
 };
 
-test('opponent return explains and gates the same actions as combat, retaining legal drop', () => {
+test('opponent return gates bite but leaves repositioning, lunge and drop available', () => {
   const runtime = ready();
   runtime.world.fighters[1].air.mode = 'reeling';
   const feedback = fightFeedback(runtime);
   assert.match(feedback.prompt, /Opponent returning/);
   assert.equal(feedback.actions.bite.disabled, true);
-  assert.equal(feedback.actions.dash.disabled, true);
-  assert.equal(feedback.movementDisabled, true);
+  assert.equal(feedback.actions.dash.disabled, false);
+  assert.equal(feedback.movementDisabled, false);
   assert.equal(feedback.actions.drop.disabled, false);
   stepWorld(runtime.world, [{ bite: true, dash: true, direction: 1 }, {}]);
   const player = runtime.world.fighters[0];
   assert.equal(player.attackId, 0);
   assert.equal(player.dashRemaining, 0);
-  assert.equal(player.velocity, 0);
+  assert.ok(player.velocity > 0);
   stepWorld(runtime.world, [{ drop: true }, {}]);
   assert.equal(player.air.mode, 'falling');
 });

@@ -2,8 +2,7 @@ import { createMover, moveFighter, resolveContact, RULES } from './movement.js';
 import { bitePose, biteContact, mixPose, BITE_CENTER_REACH } from './bite-profile.js';
 import { WEB, webPose, launchWeb, advanceWebs } from './web-attack.js';
 import { AIR, createAir, isAttached, releaseStick, advanceAerial } from './aerial.js';
-import { getStage, sameStick, stickHeight } from './stage.js';
-
+import { getStage, sameStick, stickHeight, clampToStick } from './stage.js';
 import { createIdle, advanceIdle } from './idle-pose.js';
 
 export const COMBAT = Object.freeze({
@@ -11,9 +10,9 @@ export const COMBAT = Object.freeze({
   windup: 18,
   active: 6,
   recovery: 21,
-  lungewindup: 8,
+  lungewindup: 26,
   lungeactive: 9,
-  lungerecovery: 24,
+  lungerecovery: 36,
   lungeDamage: 30,
   groundDamage: 10,
   groundInterval: 60,
@@ -33,9 +32,9 @@ export const clearGap = (world) =>
 function createFighter(id, x, forward, stage) {
   return {
     ...createMover(x, forward),
-    idleBounce: createIdle(),
     id,
     stage,
+    idleBounce: createIdle(),
     hp: COMBAT.maxHealth,
     air: createAir(stickHeight(x, stage)),
     phase: 'idle',
@@ -211,11 +210,7 @@ export function stepWorld(world, actions = [{}, {}]) {
       fighter.pose = bitePose('idle');
       continue;
     }
-    if (!isAttached(world.fighters[1 - index])) {
-      fighter.pose = fighterPose(fighter);
-      moveFighter(fighter, {}, 1 / COMBAT.tickRate, false);
-      continue;
-    }
+    const opponentAttached = isAttached(world.fighters[1 - index]);
     if (
       action.dash &&
       !action.bite &&
@@ -229,13 +224,19 @@ export function stepWorld(world, actions = [{}, {}]) {
       fighter.attackId++;
       fighter.attackHit = false;
     }
-    if (action.bite && fighter.phase === 'idle' && fighter.dashRemaining <= 1e-9) {
+    if (
+      action.bite &&
+      opponentAttached &&
+      fighter.phase === 'idle' &&
+      fighter.dashRemaining <= 1e-9
+    ) {
       enter(fighter, 'windup');
       fighter.attackId++;
       fighter.attackHit = false;
     }
     if (
       action.shoot &&
+      opponentAttached &&
       !action.bite &&
       fighter.phase === 'idle' &&
       fighter.webCooldown === 0 &&
@@ -261,6 +262,16 @@ export function stepWorld(world, actions = [{}, {}]) {
       world.fighters,
       previous.map((fighter) => fighter.x),
     );
+  else {
+    // With no second attached proposal, still enforce the walking fighter's
+    // own twig boundary. Recovery elsewhere must not freeze or unbound them.
+    world.fighters.forEach((fighter, index) => {
+      if (!isAttached(fighter)) return;
+      const proposed = fighter.x;
+      fighter.x = clampToStick(proposed, previous[index].x, world.stage);
+      if (fighter.x !== proposed) fighter.velocity = 0;
+    });
+  }
   faceOpponent(world);
   world.fighters.forEach((fighter, index) => {
     fighter.distanceTravelled += Math.abs(fighter.x - previous[index].x);

@@ -1,8 +1,16 @@
 import { advanceCoaching } from './match-flow.js';
 import { createWorld, stepWorld, COMBAT } from './combat.js';
 
-export const CLOCK = Object.freeze({ step: 1 / COMBAT.tickRate, maxDelta: 0.1, maxSteps: 6 });
-export const createClock = () => ({ previous: null, accumulator: 0, simulationTime: 0 });
+export const CLOCK = Object.freeze({
+  step: 1 / COMBAT.tickRate,
+  maxDelta: 0.1,
+  maxSteps: 6,
+});
+export const createClock = () => ({
+  previous: null,
+  accumulator: 0,
+  simulationTime: 0,
+});
 export function resetClock(clock) {
   clock.previous = null;
   clock.accumulator = 0;

@@ -1,18 +1,25 @@
 import { test, expect } from '@playwright/test';
 
-test('production load opens the menu, loads the model and starts a Bot Match', async ({ page, baseURL }) => {
+test('production load opens the menu, loads the model and starts a Bot Match', async ({
+  page,
+  baseURL,
+}) => {
   const failures = [];
-  page.on('pageerror', error => failures.push(`Page error: ${error.message}`));
-  page.on('console', message => {
+  page.on('pageerror', (error) => failures.push(`Page error: ${error.message}`));
+  page.on('console', (message) => {
     if (message.type() === 'error') failures.push(`Console error: ${message.text()}`);
   });
-  page.on('requestfailed', request => failures.push(`Request failed: ${request.url()} (${request.failure()?.errorText})`));
-  page.on('response', response => {
+  page.on('requestfailed', (request) =>
+    failures.push(`Request failed: ${request.url()} (${request.failure()?.errorText})`),
+  );
+  page.on('response', (response) => {
     if (response.status() >= 400) failures.push(`HTTP ${response.status()}: ${response.url()}`);
   });
   // Avoid Chromium's optional favicon probe becoming an unrelated resource error.
-  await page.route('**/favicon.ico', route => route.fulfill({ status: 204 }));
-  const modelResponse = page.waitForResponse(response => response.url() === new URL('models/spider.glb', baseURL).href);
+  await page.route('**/favicon.ico', (route) => route.fulfill({ status: 204 }));
+  const modelResponse = page.waitForResponse(
+    (response) => response.url() === new URL('models/spider.glb', baseURL).href,
+  );
   await page.goto('./');
   await expect(page.locator('#start-screen')).toBeVisible();
   await expect(page.locator('#game')).toHaveClass(/at-menu/);

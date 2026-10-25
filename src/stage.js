@@ -17,34 +17,40 @@ export const STAGES = Object.freeze({
   single: freezeStage({
     id: 'single',
     name: 'One stick',
+    description: 'One continuous stick for close-range duels.',
     start: [-2.45 * 1.5, 2.45 * 1.5],
     sticks: [{ walk: [-5.65 * 1.5, 5.65 * 1.5], body: [-6.7 * 1.5, 7.7 * 1.5], y: 0 }],
   }),
   twin: freezeStage({
     id: 'twin',
     name: 'Twin sticks',
+    description: 'Two level sticks. Drop and swing across the gap.',
     start: [-6.75, 6.75],
     sticks: [
       { walk: [-13.5, -0.75], body: [-15, -0.6], y: 0 },
       { walk: [0.75, 13.5], body: [0.6, 15], y: 0 },
     ],
   }),
-  terraces: freezeStage({
-    id: 'terraces',
-    name: 'Terraces',
-    start: [-6.75, 6.75],
-    sticks: [
-      { walk: [-13.5, -0.75], body: [-15, -0.6], y: 0 },
-      { walk: [0.75, 13.5], body: [0.6, 15], y: 1.25 },
-    ],
-  }),
   heights: freezeStage({
     id: 'heights',
     name: 'Stepped sticks',
+    description: 'Two uneven sticks. Time your return to reach the other height.',
     start: [-6.75, 6.75],
     sticks: [
       { walk: [-13.5, -0.75], body: [-15, -0.6], y: -0.9 },
       { walk: [0.75, 13.5], body: [0.6, 15], y: 0.9 },
+    ],
+  }),
+  terraces: freezeStage({
+    id: 'terraces',
+    name: 'Terraces',
+    description:
+      'Three sticks. Drop from a raised perch to the low center, then swing up to the other side.',
+    start: [-8.5, 8.5],
+    sticks: [
+      { walk: [-12, -5], body: [-13.5, -4.8], y: 1.25 },
+      { walk: [-2.5, 2.5], body: [-4.1, 4.1], y: 0 },
+      { walk: [5, 12], body: [4.8, 13.5], y: 1.25 },
     ],
   }),
 });
@@ -66,7 +72,13 @@ const nearest = (value, key, layout) =>
 const clamp = (x, [a, b]) => Math.max(a, Math.min(b, x));
 export const stickFor = (value, layout) => nearest(value, 'walk', layout);
 export const twigAt = (x, layout) => nearest(x, 'body', layout).body;
-export const stickAt = (value, layout) => stickFor(value, layout).walk;
+export const stickAt = (x, layout) => nearest(x, 'walk', layout).walk;
+export const stickHeight = (x, layout) => nearest(x, 'walk', layout).y;
+// Cast only toward twigs above the outlet. Horizontal distance remains primary
+// so a deliberate crossing targets the destination rather than the old rail.
+export function silkTarget(x, y, layout) {
+  return twigAbove(x, y + 0.049, layout);
+}
 export const sameStick = (a, b, layout) => stickFor(a, layout) === stickFor(b, layout);
 export const clampToStick = (x, ref = x, layout) => clamp(x, stickAt(ref, layout));
 export const clampToTwig = (x, ref = x, layout) => clamp(x, nearest(ref, 'body', layout).body);
@@ -91,6 +103,3 @@ export const span = (layout) => {
     Math.max(...sticks.map((stick) => stick.walk[1])),
   ];
 };
-
-export const stickHeight = (x, layout) => stickFor(x, layout).y;
-export const silkTarget = (x, y, layout) => twigAbove(x, y + 0.049, layout);

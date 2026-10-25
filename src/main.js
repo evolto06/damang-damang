@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RULES } from './movement.js';
 import { COMBAT } from './combat.js';
+import { getStage } from './stage.js';
 import { createAI, decideAI } from './ai.js';
 import {
   createRuntime,
@@ -35,6 +36,9 @@ const elements = new Map(
   [...document.querySelectorAll('[id]')].map((element) => ['#' + element.id, element]),
 );
 const $ = (selector) => elements.get(selector);
+$('#stage-choice').addEventListener('change', () => {
+  $('#arena-description').textContent = getStage($('#stage-choice').value).description;
+});
 const directionButtons = [...document.querySelectorAll('[data-direction]')];
 const controllerStatuses = [...document.querySelectorAll('[data-controller-status]')];
 const setText = (element, value) => {
@@ -61,6 +65,7 @@ $('#touch-pvp').addEventListener('change', (event) => {
   clearInput();
   touchPvp = event.target.checked;
   updateTouchLayout();
+  if (assetsReady) pvpButton.disabled = touchDevice && !touchPvp && connectedPads === 0;
   resize();
 });
 const audio = createGameAudio();
@@ -162,10 +167,14 @@ camera.lookAt(0, 0.4, 0);
 createStreet(scene);
 const heldStickRoot = createHeldStick(scene);
 const webEffects = createWebEffects(heldStickRoot);
-const runtime = createRuntime({ createOpponent: createAI, decideOpponent: decideAI });
+const runtime = createRuntime({
+  createOpponent: createAI,
+  decideOpponent: decideAI,
+});
 const held = [new Set(), new Set()];
 const pointerDirections = new Map();
 const controller = createControllerInput();
+let connectedPads = 0;
 const controllerDirections = [0, 0];
 runtime.inputSources = inputSources;
 const cameraFocus = { x: 0, halfSpan: 6.3 };
@@ -173,6 +182,9 @@ let viewWidth = canvas.clientWidth,
   viewHeight = canvas.clientHeight,
   previousFrame = null;
 let markerTop = 180;
+let sceneDirty = true,
+  lastDrawWorld = null,
+  lastDrawTick = -1;
 let resultAt = null;
 let series = createSeries(),
   impactState = createImpactFeedback();
@@ -181,6 +193,7 @@ const markers = [$('#player-marker'), $('#opponent-marker')].map((element) => ({
   element,
   name: element.firstElementChild,
   hint: element.lastElementChild,
+  height: 0,
 }));
 const markerPoint = new THREE.Vector3();
 const healthUI = ['player', 'opponent'].map((prefix) => ({
@@ -212,9 +225,10 @@ new GLTFLoader().load(
     silks.forEach((silk) => silk.setResolution(canvas.clientWidth, canvas.clientHeight));
     clearInput();
     assetsReady = true;
+    sceneDirty = true;
     if (window.__damangBoot) window.__damangBoot.ready = true;
     startButton.disabled = false;
-    pvpButton.disabled = false;
+    pvpButton.disabled = touchDevice && !touchPvp && connectedPads === 0;
     startStatus.textContent = 'Ready when you are. Choose Bot Match or PvP to begin.';
     startStatus.dataset.state = 'ready';
     assetStatus.hidden = true;
@@ -254,7 +268,12 @@ function applyMode(mode) {
 function startMatch(mode) {
   if (navigator.userActivation?.isActive) audio.unlock();
   controller.selectMode(mode);
-  if (!assetsReady || matchStarted) return;
+  if (
+    !assetsReady ||
+    matchStarted ||
+    (mode === 'pvp' && touchDevice && !touchPvp && connectedPads === 0)
+  )
+    return;
   matchStarted = true;
   runtime.mode = mode;
   series = createSeries();
@@ -578,6 +597,7 @@ document.addEventListener('visibilitychange', () => {
 });
 
 function resize() {
+  sceneDirty = true;
   const width = canvas.clientWidth,
     height = canvas.clientHeight;
   viewWidth = width;
@@ -598,7 +618,9 @@ function resize() {
     document.querySelector('.fighters').getBoundingClientRect().bottom -
     canvas.getBoundingClientRect().top +
     12;
-  for (const marker of markers) marker.height = 0;
+  markers.forEach((marker) => {
+    marker.height = 0;
+  });
   renderer.setSize(width, height, false);
   fitPlayCamera(camera, width, height, cameraFocus);
   silks.forEach((silk) => silk.setResolution(width, height));
@@ -625,12 +647,35 @@ function pollController(time) {
     mode: runtime.mode,
     navigation: !matchStarted ? 'menu' : dialog,
   });
+  const count = result.slots.filter((slot) => slot.connected).length;
+  if (count !== connectedPads) {
+    connectedPads = count;
+    controllerDirections.fill(0);
+    for (let index = 0; index < 2; index++) directionInput(index, time);
+    controller.reset();
+    result.actions = [];
+    result.directions = [];
+  }
+  const lonePadSlot = result.slots.findIndex((slot) => slot.connected);
+  const fighterSlot = (slot) => (runtime.mode === 'pvp' && count === 1 ? 1 : slot);
+  if (assetsReady) pvpButton.disabled = touchDevice && !touchPvp && count === 0;
+  setText(
+    $('#pvp-note'),
+    touchDevice && !touchPvp && count === 0
+      ? 'Enable two-player touch or connect a controller for P2'
+      : count === 1
+        ? 'One pad plays P2 · Keyboard / touch plays P1'
+        : touchPvp
+          ? 'Two touch sets · Keyboard · Controllers'
+          : 'Split keyboard · Optional controllers',
+  );
   const slots = result.slots
     .map((slot, index) =>
       matchStarted && runtime.mode === 'bot' && index === 1
         ? 'P2: AI (second controller idle)'
-        : `P${index + 1}: ${!slot.connected ? 'keyboard available · optional pad' : !slot.armed ? 'keyboard available · release pad buttons' : 'keyboard + controller ready'}`,
+        : `P${fighterSlot(index) + 1}: ${!slot.connected ? 'keyboard available' : !slot.armed ? 'release pad buttons' : 'controller ready'}`,
     )
+    .filter((_, index) => count !== 1 || index === lonePadSlot)
     .join(' · ');
   const status = !available
     ? 'Controller access unavailable. Keyboard and touch controls work in both modes.'
@@ -648,13 +693,15 @@ function pollController(time) {
     return;
   }
   for (const direction of result.directions) {
-    if (direction.value) inputSources[direction.fighter] = 'controller';
-    controllerDirections[direction.fighter] = direction.value;
-    directionInput(direction.fighter, direction.at);
+    const fighter = fighterSlot(direction.fighter);
+    if (direction.value) inputSources[fighter] = 'controller';
+    controllerDirections[fighter] = direction.value;
+    directionInput(fighter, direction.at);
   }
   for (const action of result.actions) {
-    inputSources[action.fighter] = 'controller';
-    queueAction(runtime, action.fighter, action.kind, action.at);
+    const fighter = fighterSlot(action.fighter);
+    inputSources[fighter] = 'controller';
+    queueAction(runtime, fighter, action.kind, action.at);
   }
 }
 
@@ -684,12 +731,14 @@ renderer.setAnimationLoop((time) => {
   );
   const delta = previousFrame === null ? 0 : Math.min(0.1, (time - previousFrame) / 1000);
   previousFrame = time;
-  followCameraFocus(
-    cameraFocus,
-    shown.map((item) => item.fighter),
-    world.stage,
-    delta,
-  );
+  if (matchStarted && !runtime.paused && world.status === 'playing') {
+    followCameraFocus(
+      cameraFocus,
+      shown.map((item) => item.fighter),
+      world.stage,
+      delta,
+    );
+  }
   fitPlayCamera(camera, viewWidth, viewHeight, cameraFocus);
   const impacts = updateImpactFeedback(impactState, world.fighters, delta, {
     paused: runtime.paused || !matchStarted,
@@ -701,7 +750,12 @@ renderer.setAnimationLoop((time) => {
   camera.updateMatrixWorld();
   const feedback = fightFeedback(runtime);
   const coaching =
-    matchStarted && !runtime.paused && !dialog && world.status === 'playing'
+    matchStarted &&
+    !runtime.paused &&
+    !dialog &&
+    world.status === 'playing' &&
+    world.fighters[0].air.mode === 'attached' &&
+    world.fighters[0].phase === 'idle'
       ? coachingHint(runtime.coaching, keysFor(runtime.mode, 0, inputSources[0]))
       : null;
   $('#coaching-panel').hidden = !coaching;
@@ -738,7 +792,7 @@ renderer.setAnimationLoop((time) => {
       ? hintsFor(world, index, runtime.mode, inputSources[index])
       : [],
   );
-  if (coaching) chosenHints[0] = [coaching];
+  if (coaching && hintsEnabled) chosenHints[0] = [coaching];
   for (const button of actionButtons.filter((button) => button.dataset.fighter === '1')) {
     const state = fightFeedback(runtime, 1).actions[button.dataset.action];
     button.disabled = state.disabled;
@@ -791,10 +845,8 @@ renderer.setAnimationLoop((time) => {
     if (marker.element.dataset.input !== inputSources[index])
       marker.element.dataset.input = inputSources[index];
     const hintText = chosenHints[index].map((hint) => hint.text).join(' · ');
-    if (marker.hint.textContent !== hintText) {
-      setText(marker.hint, hintText);
-      marker.height = 0;
-    }
+    if (marker.hint.textContent !== hintText) marker.height = 0;
+    setText(marker.hint, hintText);
     const air = shown[index].fighter.air;
     // Guidance stays above the current or return stick, including during a fall.
     markerPoint.set(
@@ -812,7 +864,8 @@ renderer.setAnimationLoop((time) => {
       ),
     );
     const labelHeight = marker.height || (marker.height = marker.element.offsetHeight);
-    // Close fighters separate their labels horizontally, leaving silhouettes clear.
+    // Separate close fighters horizontally, so neither label moves down across
+    // the twig or the fighting silhouette on a short screen.
     const y = Math.max(markerTop + labelHeight, ((1 - markerPoint.y) * viewHeight) / 2);
     setStyle(
       marker.element,
@@ -848,7 +901,19 @@ renderer.setAnimationLoop((time) => {
       damageElements.delete(id);
     }
   audio.update(world, { paused: runtime.paused || !matchStarted });
-  renderer.render(scene, camera);
+  // Frozen menus and pauses still poll controls without continuously redrawing
+  // the same shadows. Active play keeps interpolation and idle animation live.
+  if (
+    sceneDirty ||
+    world !== lastDrawWorld ||
+    world.tick !== lastDrawTick ||
+    (matchStarted && !runtime.paused && (world.status === 'playing' || impacts.items.length > 0))
+  ) {
+    renderer.render(scene, camera);
+    sceneDirty = false;
+    lastDrawWorld = world;
+    lastDrawTick = world.tick;
+  }
   camera.position.x -= impacts.shake.x;
   camera.position.y -= impacts.shake.y;
 });

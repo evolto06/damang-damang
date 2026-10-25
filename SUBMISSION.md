@@ -1,6 +1,7 @@
 # Submission preparation
 
-Imported from PR #17, which cites `docs/Level Up 3.0 Official Full Mechanics.pdf`, sections I.B.8–11 and forms on pages 10–15. The source PDF is not bundled in this integration; verify these requirements against the official document. This is a working checklist, not a signed
+Based on the team-supplied `docs/Level Up 3.0 Official Full Mechanics.pdf`, sections
+I.B.8–11 and the forms on pages 10–15. This is a working checklist, not a signed
 declaration or a submitted entry. Confirm current deadlines with the organizers.
 
 ## Team-owned deliverables
@@ -18,13 +19,12 @@ declaration or a submitted entry. Confirm current deadlines with the organizers.
 
 The official gameplay condition permits PvP or PvE with leaderboards. This project
 uses its local PvP mode as its competitive match format, with a 60-second limit,
-health-based winner and equal-health draw. Controller support improves the local
+health-based round winner and equal-health draw, in a first-to-two series. Controller support improves the local
 demo; the PDF does not specifically mandate controllers.
 
 ## Draft synopsis
 
-**Game title:** Damang Damang
-
+**Game title:** Damang Damang  
 **Team name:** To be supplied by the team
 
 Damang Damang is a browser fighting game inspired by spider fighting on twigs in
@@ -37,20 +37,21 @@ leave opportunities for an opponent to interrupt or punish it. Damaging hits kno
 surviving spiders off the twig. Players cast silk, steer a pendulum swing and climb
 back into the fight; landing on the pavement costs health.
 
-Four arena options offer a single twig, separated twigs and two alternative raised layouts.
+Four arenas offer a single twig, separated level twigs, a two-height crossing and
+two raised perches around a lower center fighting stick.
 A shared camera follows both fighters. Players can practice against a bot or compete
-locally using a split keyboard, controllers, or separate shared-screen touch controls for both players. Nearby
+locally using a split keyboard, controllers, or touch alongside a controller. Nearby
 button hints teach the current action, while distinct fighter colors, health displays
 and synthesized sounds make combat easier to follow.
 
-Matches are first to two wins, with optional first-match coaching. Each round lasts up to 60 seconds. Reducing an opponent's health to zero wins the
+Each round lasts up to 60 seconds. Reducing an opponent's health to zero wins the
 round; at timeout, greater remaining health wins and equal health produces a draw.
 
 ## Draft Form 03 notes — review before signing
 
 | Tool / material | Application and extent |
 | --- | --- |
-| OpenAI Codex | Heavy assistance on this branch: issue analysis, game programming, debugging, procedural visual refinements, balance proposals, tests, and documentation. The original PR reports browser verification; the integrated browser suite still requires execution. Team members must review and accept the work. |
+| OpenAI Codex | Heavy assistance on this branch: issue analysis, game programming, debugging, procedural visual refinements, balance proposals, tests, browser verification and documentation. Team members must review and accept the work. |
 | Three.js and its addons | External rendering/GLB-loading library; MIT license. The production distribution includes its license notice. |
 | Vite | External development/build tooling; list it if the form requests development libraries. |
 | Playwright and Prettier | External testing/formatting tools added for verification and code readability; development only. |

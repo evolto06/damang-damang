@@ -15,7 +15,7 @@ export function fitPlayCamera(
   const topBand = short ? 104 : 148;
   const bottomBand = Math.max(short ? 94 : width <= 600 ? 174 : 132, focus.bottomBand ?? 0);
   camera.updateMatrixWorld(true);
-  const top = new THREE.Vector3(0, AIR.stickY + (focus.topY ?? 0) + 0.2, 0).applyMatrix4(
+  const top = new THREE.Vector3(0, AIR.stickY + (focus.topY ?? 0) + 1.6, 0).applyMatrix4(
     camera.matrixWorldInverse,
   ).y;
   const bottom = new THREE.Vector3(0, -2.55, 0).applyMatrix4(camera.matrixWorldInverse).y;
@@ -40,9 +40,10 @@ export function fitPlayCamera(
 export function followCameraFocus(focus, fighters, stage, deltaSeconds = 1 / 60) {
   const xs = fighters.map((fighter) => fighter.x),
     [low, high] = span(stage);
-  const ys = fighters.map((fighter) => fighter.air?.y ?? fighter.fighter?.air?.y ?? fighter.y ?? 0);
-  const highest = Math.max(...ys);
-  focus.topY = Math.max(highest, ...getStage(stage).sticks.map((stick) => stick.y));
+  focus.topY = Math.max(
+    ...getStage(stage).sticks.map((stick) => stick.y),
+    ...fighters.map((fighter) => fighter.air?.y ?? 0),
+  );
   const midpoint = (Math.min(...xs) + Math.max(...xs)) / 2;
   const targetSpan = Math.min(
     (high - low) / 2 + 1.8,

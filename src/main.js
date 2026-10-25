@@ -598,6 +598,7 @@ function resize() {
     document.querySelector('.fighters').getBoundingClientRect().bottom -
     canvas.getBoundingClientRect().top +
     12;
+  for (const marker of markers) marker.height = 0;
   renderer.setSize(width, height, false);
   fitPlayCamera(camera, width, height, cameraFocus);
   silks.forEach((silk) => silk.setResolution(width, height));
@@ -785,12 +786,15 @@ renderer.setAnimationLoop((time) => {
   }
   heldStickRoot.updateMatrixWorld(true);
   const close = Math.abs(shown[0].x - shown[1].x) < 2.8;
-  let firstMarkerY = 0;
   for (const [index, marker] of markers.entries()) {
     marker.element.hidden = !matchStarted || !!dialog;
     if (marker.element.dataset.input !== inputSources[index])
       marker.element.dataset.input = inputSources[index];
-    setText(marker.hint, chosenHints[index].map((hint) => hint.text).join(' · '));
+    const hintText = chosenHints[index].map((hint) => hint.text).join(' · ');
+    if (marker.hint.textContent !== hintText) {
+      setText(marker.hint, hintText);
+      marker.height = 0;
+    }
     const air = shown[index].fighter.air;
     // Guidance stays above the current or return stick, including during a fall.
     markerPoint.set(
@@ -800,14 +804,16 @@ renderer.setAnimationLoop((time) => {
     );
     heldStickRoot.localToWorld(markerPoint);
     markerPoint.project(camera);
-    const x = Math.max(70, Math.min(viewWidth - 70, ((markerPoint.x + 1) * viewWidth) / 2));
-    const labelHeight = marker.element.offsetHeight;
-    // Keep both labels below the HUD; close fighters use distinct rows even at the clamp.
-    const y =
-      close && index === 1
-        ? firstMarkerY + labelHeight + 8
-        : Math.max(markerTop + labelHeight, ((1 - markerPoint.y) * viewHeight) / 2);
-    if (index === 0) firstMarkerY = y;
+    const x = Math.max(
+      94,
+      Math.min(
+        viewWidth - 94,
+        ((markerPoint.x + 1) * viewWidth) / 2 + (close ? (index === 0 ? -100 : 100) : 0),
+      ),
+    );
+    const labelHeight = marker.height || (marker.height = marker.element.offsetHeight);
+    // Close fighters separate their labels horizontally, leaving silhouettes clear.
+    const y = Math.max(markerTop + labelHeight, ((1 - markerPoint.y) * viewHeight) / 2);
     setStyle(
       marker.element,
       'transform',
@@ -865,5 +871,14 @@ if (import.meta.env.DEV)
       rigs: rigs.map(inspectRig),
       drawCalls: renderer.info.render.calls,
       triangles: renderer.info.render.triangles,
+      fighterScreens: rigs.map((rig) => {
+        const bounds = new THREE.Box3().setFromObject(rig.root, true);
+        const top = new THREE.Vector3(
+          bounds.getCenter(new THREE.Vector3()).x,
+          bounds.max.y,
+          0,
+        ).project(camera);
+        return { top: ((1 - top.y) * viewHeight) / 2 };
+      }),
     }),
   };

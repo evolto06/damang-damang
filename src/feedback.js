@@ -7,6 +7,9 @@ export const phaseLabels = {
   windup: 'Windup',
   active: 'Bite active',
   recovery: 'Recovering',
+  lungewindup: 'Lunge windup',
+  lungeactive: 'Lunge strike',
+  lungerecovery: 'Lunge recovery',
   hitstun: 'Hit · wait',
   webwindup: 'Web windup',
   webrelease: 'Web release',
@@ -119,7 +122,7 @@ export function hintsFor(world, index = 0, mode = 'bot', input = 'keyboard') {
 const returnPrompt = (fighter, keys) =>
   ({
     falling: `Falling · Press ${keys.web} / Web to return.`,
-    grounded: `On pavement · Press ${keys.web} / Web to return before time runs out; pavement contact costs health.`,
+    grounded: `Pavement hurts · Press ${keys.web} / Web to return now.`,
     deploying: 'Casting silk · Return is automatic.',
     swinging: `Swinging · ${keys.move} steers; climbing starts automatically.`,
     reeling: `Climbing · ${keys.move} steers; wait for the grip.`,
@@ -127,13 +130,12 @@ const returnPrompt = (fighter, keys) =>
   })[fighter.air.mode];
 
 // Presentation reads the same eligibility gates as combat; it never queues input.
-export function fightFeedback(runtime, index = 0) {
+export function fightFeedback(runtime) {
   const { world, ready, paused } = runtime;
-  const player = world.fighters[index],
-    opponent = world.fighters[1 - index];
+  const [player, opponent] = world.fighters;
   const pvp = runtime.mode === 'pvp';
-  const keys = keysFor(runtime.mode, index, runtime.inputSources?.[index]);
-  const opponentName = pvp ? (index ? 'P1' : 'P2') : 'Opponent';
+  const keys = keysFor(runtime.mode, 0, runtime.inputSources?.[0]);
+  const opponentName = pvp ? 'P2' : 'Opponent';
   const lifecycle =
     world.status !== 'playing' ? 'Round over' : paused ? 'Paused' : !ready ? 'Loading' : '';
   const frozen = lifecycle || (world.hitstop > 0 ? 'Contact hold' : '');
@@ -160,7 +162,9 @@ export function fightFeedback(runtime, index = 0) {
   else if (world.hitstop > 0) prompt = 'Contact · Brief impact hold; actions resume automatically.';
   else if (!attached)
     prompt = player.air.blocked
-      ? `${opponentName} above · Steer ${clearLabel(player, keys)} to clear them and keep climbing.`
+      ? player.air.blockReason === 'height'
+        ? `Twig too high · Steer ${clearLabel(player, keys)} back beneath your silk anchor.`
+        : `${opponentName} above · Steer ${clearLabel(player, keys)} to clear them and keep climbing.`
       : returnPrompt(player, keys);
   else if (waiting)
     prompt = `${opponentName} returning · Movement, bite and lunge wait for their grip.`;
@@ -178,6 +182,12 @@ export function fightFeedback(runtime, index = 0) {
   else if (player.phase === 'recovery')
     prompt = 'Bite recovery · Wait before moving, biting, lunging or dropping.';
   else if (player.phase === 'hitstun') prompt = 'Hit · Wait to recover before acting again.';
+  else if (player.phase === 'lungewindup')
+    prompt = 'Lunge windup · Direction committed; the strike follows.';
+  else if (player.phase === 'lungeactive')
+    prompt = 'Lunge strike · Evades webs; bites can interrupt.';
+  else if (player.phase === 'lungerecovery')
+    prompt = 'Lunge recovery · Exposed after the strike; wait before acting.';
   else if (dashing) prompt = 'Lunging · Wait for the lunge to finish before biting or dropping.';
   else if (!sameStick(player.x, opponent.x, world.stage))
     prompt = `Across the gap · Move to the inner end; ${keys.drop} drops; steer ${player.x < opponent.x ? keys.right : keys.left} across, then ${keys.web} returns.`;
@@ -192,7 +202,10 @@ export function fightFeedback(runtime, index = 0) {
         (!isAttached(world.fighters[1 - index]) ? 'Return hold' : phaseLabels[fighter.phase]),
     ),
     actions: {
-      shoot: { disabled: !!shootReason, caption: shootReason || `${keys.shoot} · STUN` },
+      shoot: {
+        disabled: !!shootReason,
+        caption: shootReason || `${keys.shoot} · STUN`,
+      },
       bite: { disabled: !!stickReason, caption: stickReason || keys.bite },
       dash: { disabled: !!dashReason, caption: dashReason || keys.dash },
       drop: { disabled: !!dropReason, caption: dropReason || keys.drop },

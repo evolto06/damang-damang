@@ -221,3 +221,35 @@ test('two controller queues trade bites and stay identical at 30/60/144 render H
   });
   assert.deepEqual(outcomes[0], outcomes[1]); assert.deepEqual(outcomes[1], outcomes[2]);
 });
+
+
+test('controller navigation visits arena, settings and result actions without leaking combat', () => {
+  const input = createControllerInput(), menu = context({ started: false, navigation: 'menu' });
+  input.poll([pad()], 0, menu);
+  const down = input.poll([pad([13])], 1, menu);
+  assert.deepEqual(down.navigation, { move: 1, adjust: 0, activate: false, back: false, resume: false });
+  assert.deepEqual(down.actions, []); input.poll([pad()], 2, menu);
+  assert.equal(input.poll([pad([15])], 3, menu).navigation.adjust, 1);
+  input.poll([pad()], 4, menu);
+  assert.equal(input.poll([pad([0])], 5, menu).navigation.activate, true);
+  const pause = context({ paused: true, navigation: 'pause' });
+  assert.equal(input.poll([pad([0])], 6, pause).navigation, undefined);
+  input.poll([pad()], 7, pause);
+  assert.equal(input.poll([pad([1])], 8, pause).navigation.back, true);
+  const result = context({ ended: true, navigation: 'result' });
+  input.poll([pad()], 9, result);
+  const confirm = input.poll([pad([0, 2])], 10, result);
+  assert.equal(confirm.navigation.activate, true); assert.deepEqual(confirm.actions, []);
+});
+
+test('left stick movement respects deadzone and dpad precedence; held stick cannot arm a revealed menu', () => {
+  const input = armed();
+  assert.equal(input.poll([pad([], { axes: [0.2, 0] })], 1, context()).direction, null);
+  assert.equal(input.poll([pad([], { axes: [0.8, 0] })], 2, context()).direction.value, 1);
+  assert.equal(input.poll([pad([14], { axes: [0.8, 0] })], 3, context()).direction.value, -1);
+  const menu = context({ started: false, navigation: 'menu' });
+  input.poll([pad([], { axes: [0, 0.8] })], 4, menu);
+  assert.equal(input.poll([pad([0], { axes: [0, 0.8] })], 5, menu).navigation, undefined);
+  input.poll([pad()], 6, menu);
+  assert.equal(input.poll([pad([], { axes: [0, -0.8] })], 7, menu).navigation.move, -1);
+});

@@ -17,10 +17,10 @@ test('drop releases under gravity with retained momentum; it wins simultaneous w
   assert.ok(player.air.y < y && player.air.vy < speed); assert.equal(silkEndpoints(player).visible, false);
 });
 test('falling reaches the visible ground and stays recoverable before the round expires', () => {
-  const world = createWorld(); stepWorld(world, [{ drop: true }, {}]); tick(world, 600);
+  const world = createWorld(); stepWorld(world, [{ drop: true }, {}]); tick(world, 120);
   const player = world.fighters[0], ground = structuredClone(player.air);
   assert.equal(ground.mode, 'grounded'); assert.equal(ground.y, AIR.groundY);
-  tick(world, 600); assert.deepEqual(player.air, ground);
+  tick(world, 30); assert.deepEqual(player.air, ground);
   assert.equal(player.hp, 100); assert.equal(world.status, 'playing');
   stepWorld(world, [{ web: true }, {}]); assert.equal(player.air.mode, 'deploying');
   for (let i = 0; i < 360 && !isAttached(player); i++) stepWorld(world);

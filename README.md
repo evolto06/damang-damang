@@ -26,9 +26,9 @@ Open the URL printed by Vite. Choose **Bot Match** or local **PvP** after loadin
 | Pause / resume | Esc | Esc | Esc | Start / Options |
 | Restart | R | R | R | Bottom face on result screen |
 
-Touch buttons control P1. Controller bindings follow physical button positions; printed PlayStation and Switch labels differ. Press and release a controller button to connect it. The first recognized controller takes P1 and the next takes P2. Release held controller buttons after starting, resuming, or restarting before playing.
+Touch buttons control P1; enable Two-player touch for separate P1/P2 controls in landscape. Keyboard and controllers remain available alongside touch. Controller bindings follow physical button positions; printed PlayStation and Switch labels differ. Press and release a controller button to connect it. The first recognized controller takes P1 and the next takes P2. Release held controller buttons after starting, resuming, or restarting before playing.
 
-Move close enough to bite, or shoot a web to briefly stun the opponent. Drop or retreat to evade; while falling or grounded, cast silk and steer to swing back. Choose a one-stick or two-stick arena before starting. A round ends at zero health or after 60 seconds; higher health wins at timeout, with equal health a draw. The pause dialog contains complete controls, a button-hint switch, sound mute, and a way to change mode or arena. Sounds are synthesized in the browser after your first interaction.
+Move close enough to bite, or shoot a web to briefly stun the opponent. Drop or retreat to evade; while falling or grounded, cast silk and steer to swing back. Choose one stick, twin sticks, or stepped sticks at different heights. Matches are first to two round wins; draws award no point and replay. A round ends at zero health or after 60 seconds; higher health wins at timeout. Staying on the pavement causes damage after a grace period, so cast silk to recover. The pause dialog contains complete controls, a button-hint switch, sound mute, and a way to change mode or arena. Sounds are synthesized in the browser after your first interaction. Optional coaching teaches movement, web shots, and bites, and can be skipped. Controller D-pad navigates menus, left/right adjusts choices, bottom face confirms, and right face goes back.
 
 ## Build and checks
 
@@ -41,7 +41,7 @@ npm run preview
 
 The build is written to `dist/`. Relative URLs support deployment beneath a subfolder. The deployment check serves the production build under `/damang-damang/` and checks HTML, JavaScript, CSS, and the GLB model over HTTP; it does not render the game.
 
-CI runs tests, a production build, and that deployment check on pull requests and pushes to `main`. Only a successful run on `main` can upload and deploy to GitHub Pages. Repository administrators must select **GitHub Actions** as the Pages source; that setting and a live deployment have not been verified here. No published play link or gameplay capture is claimed.
+CI checks formatting, unit tests, production builds, nested asset serving, and Chromium smoke tests for root and nested URLs. Run `npm run test:smoke` after building on a machine with Playwright Chromium installed. The browser suite has been prepared but has not been executed locally here. Only a successful run on `main` can upload and deploy to GitHub Pages. Repository administrators must select **GitHub Actions** as the Pages source; that setting and a live deployment have not been verified here. No published play link or gameplay capture is claimed.
 
 See [MECHANICS.md](MECHANICS.md) for simulation rules and source pointers.
 

@@ -36,6 +36,8 @@ The bot observes world state rather than player input. It uses seeded decision t
 
 `src/audio.js` synthesizes gameplay sounds through Web Audio after a user gesture and provides mute control. No downloaded audio files are bundled.
 
+After three seconds without gameplay input, an attached, resting spider gently bounces with its feet anchored to the stick; pausing freezes the motion, and combat restores both spiders to their calibrated pose.
+
 ## Release checks and limits
 
 `npm test` exercises simulation and input rules. `npm run build` creates the static production files. `node scripts/check-deployment.mjs` checks nested-path asset serving over HTTP, including the GLB header; it cannot establish rendered appearance, browser Gamepad behavior, or successful hosting.
